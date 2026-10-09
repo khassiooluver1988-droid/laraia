@@ -64,7 +64,7 @@ const cfgNode=el('angela-default-config');
 let config;try{config=JSON.parse(cfgNode.textContent)}catch{config={}};
 if(document.body.dataset.mode==='editor')try{let saved=JSON.parse(localStorage.getItem('angela_config_editor_v1')||'null');if(saved&&typeof saved==='object')config={...config,...saved}}catch{}
 const log=el('messages'),chips=el('chips'),form=el('form'),field=el('message'),sendButton=el('send'),photo=el('avatar');
-const init=()=>({step:'nome',nome:'',categoria:'',pedido:'',quantidade:1,precoCentavos:0,produto:null,itens:[],demonstrativo:false});let state=init();
+const init=()=>({step:'nome',nome:'',contato:'',categoria:'',pedido:'',quantidade:1,precoCentavos:0,produto:null,itens:[],demonstrativo:false,carrinho:[],recebimento:'',endereco:'',observacoes:''});let state=init();
 function speak(message,mine=false,link=null){const row=document.createElement('div');row.className='msg'+(mine?' me':'');if(!mine){const img=document.createElement('img');img.src=photo.src;img.alt='';img.className='mini';row.appendChild(img)}const box=document.createElement('div');box.className='bubble';box.textContent=message;if(link){const block=document.createElement('div');block.className='links';const a=document.createElement('a');a.className='textlink';a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.textContent='📋 Abrir cardápio';block.appendChild(a);box.appendChild(block)}row.appendChild(box);log.appendChild(row);log.scrollTop=log.scrollHeight;return row}
 function options(...labels){chips.textContent='';for(let label of labels){const b=document.createElement('button');b.className='chip';b.textContent=label;b.type='button';b.addEventListener('click',()=>onMessage(label));chips.appendChild(b)}}
 function safeLink(value){try{const url=new URL(String(value||''));return ['https:','http:'].includes(url.protocol)?url.href:null}catch{return null}}
@@ -105,66 +105,56 @@ function showMenu(cat){
   speak('Qual produto você deseja, '+state.nome+'? Digite apenas o número da opção (ex.: '+state.itens[0].numero+').');
   options(...state.itens.map(i=>String(i.numero)),'🍕 Pizza','🍔 Hambúrguer');
 }
-function summary(){
-  const total=state.precoCentavos*state.quantidade;
-  return (state.demonstrativo?'⚠️ PEDIDO FICTÍCIO / SIMULAÇÃO — NÃO PAGAR\n':'')+
-    'Pedido — '+(config.nomeLoja||'CASA DO HAMBÚRGUER')+
-    '\nCliente: '+state.nome+
-    '\nCategoria: '+(state.categoria==='pizza'?'Pizza':'Hambúrguer')+
-    '\nOpção: '+(state.produto?state.produto.numero:'-')+
-    '\nProduto: '+state.pedido+
-    '\nValor unitário: '+valorBRL(state.precoCentavos)+
-    '\nQuantidade: '+state.quantidade+
-    '\nSubtotal dos produtos: '+valorBRL(total)+
-    '\nTaxa de entrega e total final: confirmar com atendente.'+
-    '\nPagamento: Pix somente após conferir os dados oficiais.';
-}
-
+function total(){return state.carrinho.reduce((s,p)=>s+p.precoCentavos*p.quantidade,0)}
+function demo(){return state.carrinho.some(p=>p.demonstrativo)}
+function summary(){return (demo()?'⚠️ SIMULAÇÃO — NÃO PAGAR\n':'')+
+'Pedido — '+(config.nomeLoja||'CASA DO HAMBÚRGUER')+'\nCliente: '+state.nome+
+(state.contato?'\nWhatsApp: '+state.contato:'')+
+'\n\nItens:\n'+(state.carrinho.map((p,i)=>(i+1)+'. '+p.quantidade+'x '+p.nome+' ('+(p.categoria==='pizza'?'Pizza':'Hambúrguer')+') — '+valorBRL(p.precoCentavos*p.quantidade)).join('\n')||'Nenhum produto')+
+'\n\nSubtotal dos produtos: '+valorBRL(total())+
+'\nRecebimento: '+(state.recebimento||'Não informado')+
+(state.endereco?'\nEndereço: '+state.endereco:'')+
+(state.observacoes?'\nObservações: '+state.observacoes:'')+
+'\nEntrega e valor final: sujeitos a confirmação humana.'+
+'\nPagamento: Pix oficial somente após conferência do valor final.'}
+function more(){state.step='mais';speak('✅ Adicionado ao pedido!\n\n'+summary()+'\n\nQuer adicionar outro produto ou finalizar?');options('Adicionar outro produto','Finalizar pedido','Ver resumo','Remover último item')}
+function checkout(){if(!state.carrinho.length){speak('O pedido está vazio.');requestCategory();return}state.step='recebimento';speak('Você prefere receber por ENTREGA ou fazer RETIRADA na loja?');options('Entrega','Retirada')}
+function observations(){state.step='observacoes';speak('Alguma observação para a cozinha? Se não houver, responda “Nenhuma”.');options('Nenhuma')}
 function attendant(){const phone=String(config.whatsapp||'').replace(/\D/g,'');if(phone.length>=12&&phone.length<=15){const url='https://wa.me/'+phone+'?text='+encodeURIComponent('Olá! Vim do atendimento da Ângela.\n\n'+summary()+'\n\nGostaria de confirmar o pedido e receber orientação para confirmar o pagamento.');speak('A próxima etapa é falar com um atendente para confirmar o pedido e o pagamento. Toque no botão abaixo para enviar o resumo pelo WhatsApp.',false,url);const last=log.lastElementChild.querySelector('a');if(last)last.textContent='💬 Enviar pedido ao atendente';options('Copiar resumo do pedido','Fazer novo pedido')}else{speak('O WhatsApp da loja ainda não foi cadastrado, então este chat NÃO enviou seu pedido a uma pessoa. Você pode copiar o resumo e entrar em contato com a equipe pelos canais oficiais da loja.');options('Copiar resumo do pedido','Fazer novo pedido')}}
 async function copySummary(){const text=summary();try{await navigator.clipboard.writeText(text);speak('Resumo copiado! Você já pode compartilhar com o atendente.')}catch{speak('Copie este resumo e envie ao atendente da loja:\n\n'+text)}}
-function finish(){state.step='finalizado';speak('Certo, '+state.nome+'! O seu pedido foi organizado. Um atendente humano deverá confirmar o valor final, o recebimento do Pix e a conclusão do pedido. Esta página não verifica pagamentos automaticamente.');attendant()}
-
-function showPix(){
-  state.step='finalizado';
-  const key=String(config.chavePix||'').trim(),owner=String(config.titularPix||'').trim();
-  const resumo='Resumo do seu pedido:\n\n'+summary()+'\n\n';
-  if(state.demonstrativo){
-    speak(resumo+'⚠️ ESTA É UMA SIMULAÇÃO. Os preços são fictícios. Não faça nenhum pagamento com base neste pedido. Quando a loja cadastrar o cardápio oficial, um atendente poderá informar o valor e as condições reais.');
-  }else if(key&&owner){
-    speak(resumo+'💳 Dados do Pix informado pela loja\nChave Pix: '+key+'\nFavorecido: '+owner+'\n\nConfira os dados no aplicativo do seu banco antes de pagar. Um atendente deve confirmar o total e verificar o recebimento. Esta página não confirma pagamentos.');
-  }else{
-    speak(resumo+'A chave Pix oficial e/ou o favorecido ainda não foram cadastrados. Não realize pagamentos para dados não verificados. Um atendente deverá informar os dados oficiais.');
-  }
-  finish();
-}
-
+function finish(){state.step='finalizado';speak('O pedido foi organizado! O próximo atendimento será humano: um atendente deverá conferir disponibilidade, total com entrega, Pix e confirmação do pagamento. A Ângela não confirma pagamentos automaticamente.');attendant()}
+function showPix(){state.step='finalizado';const key=String(config.chavePix||'').trim(),owner=String(config.titularPix||'').trim();const resumo='Resumo:\n\n'+summary()+'\n\n';if(demo()){speak(resumo+'⚠️ CARÁTER FICTÍCIO: preços apenas para testar. Não realize pagamentos neste atendimento demonstrativo.')}else if(key&&owner){speak(resumo+'Chave Pix informada pela loja: '+key+'\nFavorecido: '+owner+'\n\n⚠️ Confirme com o atendente o valor final e confira o favorecido no banco ANTES de pagar.')}else{speak(resumo+'A chave Pix e/ou o favorecido oficiais ainda não foram informados. Não realize pagamentos até receber os dados verificados e o valor final de um atendente.')}finish()}
 function reset(){state=init();log.innerHTML='<div class="day">Seu atendimento começa aqui</div>';speak('Olá! 👋 Sou a Ângela, assistente virtual da '+(config.nomeLoja||'Casa do Hambúrguer')+'.\n\nVou ajudar você a escolher entre nossas pizzas e hambúrgueres. Como posso chamar você?');options()}
-function onMessage(raw){const text=String(raw||'').trim();if(!text)return;speak(text,true);field.value='';const key=text.toLowerCase();if(/fazer novo pedido/.test(key)){reset();return}if(/copiar resumo do pedido/.test(key)&&state.step==='finalizado'){copySummary();return}
-if(state.step==='nome'){const name=nameOf(text);if(name.length<2||name.length>70||categoryOf(name)){speak('Antes de começar, como posso chamar você?');return}state.nome=name;requestCategory();return}
-if(state.step==='categoria'){const cat=key==='1'?'hamburguer':key==='2'?'pizza':categoryOf(text);if(!cat){speak('Digite 1 para Hambúrguer ou 2 para Pizza.');options('1 - Hambúrguer','2 - Pizza');return}options();showMenu(cat);return}
-if(state.step==='cardapioPendente'){if(/outra op|voltar|pizza|hamburg/i.test(key)){requestCategory();return}if(/atendente/.test(key)){speak('Vou deixar o caminho do atendimento humano disponível para você.');attendant();return}speak('Ainda precisamos do cardápio oficial para escolher o item. Você pode mudar a categoria ou falar com um atendente.');options('Falar com atendente','Escolher outra opção');return}
-
-if(state.step==='pedido'){
-  const cat=categoryOf(text);
-  if(cat && text.length<22){showMenu(cat);return}
-  const normal=text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const numberText=normal.match(/^(?:(?:opcao|numero)\s*|quero\s*(?:a|o)?\s*)?(\d{1,2})\s*$/);
-  const numero=numberText?Number(numberText[1]):null;
-  const item=numero!==null?state.itens.find(i=>i.numero===numero):state.itens.find(i=>i.nome.toLowerCase()===text.toLowerCase());
-  if(!item){speak('Não encontrei essa opção no cardápio. Escolha um dos números apresentados: '+state.itens.map(i=>i.numero).join(', ')+'.');options(...state.itens.map(i=>String(i.numero)));return}
-  state.produto=item;state.pedido=item.nome;state.precoCentavos=item.precoCentavos;state.step='quantidade';
-  speak('Você escolheu a opção '+item.numero+': '+item.nome+' por '+valorBRL(item.precoCentavos)+' cada. Quantas unidades deseja?');
-  options('1','2','3','4');return
+function onMessage(raw){
+const text=String(raw||'').trim();if(!text)return;speak(text,true);field.value='';
+const k=text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+if(/^(novo pedido|fazer novo pedido|cancelar pedido|recomecar)$/.test(k)){reset();return}
+if(k==='copiar resumo do pedido'&&state.step==='finalizado'){copySummary();return}
+if(state.step==='nome'){const n=nameOf(text);if(n.length<2||categoryOf(n)){speak('Qual seu nome?');return}state.nome=n;state.step='contato';speak('Prazer, '+n+'! Qual seu WhatsApp com DDD para contato? Se preferir, digite “Pular contato”.');options('Pular contato');return}
+if(state.step==='contato'){if(!/pular|prefiro nao/.test(k)){const phone=text.replace(/\D/g,'');if(![10,11,12,13].includes(phone.length)){speak('Informe seu WhatsApp com DDD ou toque em “Pular contato”.');options('Pular contato');return}state.contato=phone}requestCategory();return}
+if(state.step==='categoria'){const c=k==='1'?'hamburguer':k==='2'?'pizza':categoryOf(text);if(!c){speak('Digite 1 para Hambúrguer ou 2 para Pizza.');options('1 - Hambúrguer','2 - Pizza');return}options();showMenu(c);return}
+if(state.step==='cardapioPendente'){if(/outra|voltar|pizza|hamburg/.test(k)){requestCategory();return}if(/atendente/.test(k)){attendant();return}options('Falar com atendente','Escolher outra opção');return}
+if(state.step==='pedido'){const c=categoryOf(text);if(c&&text.length<22){showMenu(c);return}
+const match=k.match(/^(?:(?:opcao|numero)\s*|quero\s*(?:a|o)?\s*)?(\d{1,2})$/);
+const item=match?state.itens.find(x=>x.numero===Number(match[1])):state.itens.find(x=>x.nome.toLowerCase()===k);
+if(!item){speak('Opção não encontrada. Digite: '+state.itens.map(x=>x.numero).join(', '));options(...state.itens.map(x=>String(x.numero)));return}
+state.produto=item;state.pedido=item.nome;state.precoCentavos=item.precoCentavos;state.step='quantidade';speak('Você escolheu '+item.nome+' — '+valorBRL(item.precoCentavos)+' cada. Quantas unidades?');options('1','2','3','4');return}
+if(state.step==='quantidade'){if(!/^\d{1,2}$/.test(text)||Number(text)<1||Number(text)>30){speak('Escolha de 1 a 30 unidades.');options('1','2','3','4');return}
+state.carrinho.push({nome:state.produto.nome,numero:state.produto.numero,precoCentavos:state.produto.precoCentavos,quantidade:Number(text),categoria:state.categoria,demonstrativo:state.demonstrativo});
+options();more();return}
+if(state.step==='mais'){
+if(/remover/.test(k)){const p=state.carrinho.pop();speak(p?'Removido: '+p.nome:'Pedido vazio.');if(state.carrinho.length){more()}else{requestCategory()}return}
+if(/resumo|carrinho/.test(k)){speak(summary());options('Adicionar outro produto','Finalizar pedido','Remover último item');return}
+if(/adicionar|outro produto|mais/.test(k)){requestCategory();return}
+if(/finalizar|concluir|fechar/.test(k)){checkout();return}
+speak('Escolha adicionar, finalizar, ver resumo ou remover.');options('Adicionar outro produto','Finalizar pedido','Ver resumo','Remover último item');return}
+if(state.step==='recebimento'){if(/entrega|delivery/.test(k)){state.recebimento='Entrega';state.step='endereco';speak('Informe rua, número, bairro e cidade para que o atendente verifique a entrega e o frete.');options();return}
+if(/retirada|retirar/.test(k)){state.recebimento='Retirada na loja';state.endereco='';observations();return}
+speak('Escolha Entrega ou Retirada.');options('Entrega','Retirada');return}
+if(state.step==='endereco'){if(text.length<8){speak('Informe um endereço completo com rua, número, bairro e cidade.');return}state.endereco=text.slice(0,240);observations();return}
+if(state.step==='observacoes'){state.observacoes=/^(nenhum|nenhuma|nao|nada|sem observacoes)$/.test(k)?'':text.slice(0,200);options();showPix();return}
+speak('Seu pedido já foi organizado. Se quiser começar novamente, toque em ↻ Novo.');options('Fazer novo pedido')
 }
-if(state.step==='quantidade'){
-  const num=Number(text);
-  if(!/^\d{1,2}$/.test(text)||!Number.isInteger(num)||num<1||num>30){speak('Informe uma quantidade de 1 a 30 unidades.');options('1','2','3','4');return}
-  state.quantidade=num;options();
-  speak('Subtotal: '+num+' × '+valorBRL(state.precoCentavos)+' = '+valorBRL(state.precoCentavos*num)+'. A taxa de entrega, quando houver, e o valor final dependem de confirmação humana.');
-  showPix();return
-}
-
-speak('O atendimento inicial foi concluído. Para um novo pedido, toque em “↻ Novo”.');options('Fazer novo pedido')}
 form.addEventListener('submit',e=>{e.preventDefault();onMessage(field.value)});field.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});el('reset').addEventListener('click',reset);
 function populate(){const f=el('settingsForm');for(const [k,v] of Object.entries(config))if(f.elements.namedItem(k))f.elements.namedItem(k).value=v;el('brandName').textContent=config.nomeLoja||'CASA DO HAMBÚRGUER'}
 function collect(){const f=el('settingsForm'),next={};for(const k of Object.keys(config)){let item=f.elements.namedItem(k);next[k]=item?String(item.value||'').trim():''}return next}
