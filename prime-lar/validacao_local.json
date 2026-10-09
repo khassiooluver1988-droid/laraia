@@ -1,0 +1,20 @@
+{
+  "status": "aprovado_localmente",
+  "checks": [
+    "Servidor: origem, validação de entrada e criação da conversa sem consumir IA.",
+    "Servidor: identificador sem token correto não acessa a conversa.",
+    "Servidor: mensagens salvas em par e reenvio sem duplicar resposta, histórico ou chamada de IA.",
+    "Servidor: ordem das mensagens e perfil anterior preservam o contexto.",
+    "Servidor: cota e falha do provedor retornam erro sem histórico parcial.",
+    "Servidor: transcrição separada do chat, áudio inválido e fala vazia tratados.",
+    "Servidor: perfil limitado aos campos previstos e CPF removido do resumo.",
+    "Interface: abertura da Prime Lar, botão Alugar, envio e desbloqueio após resposta.",
+    "Interface: atalhos preservam o rascunho existente e exigem revisão.",
+    "Interface: falha preserva a mensagem e usa o mesmo identificador no reenvio.",
+    "Interface: resumo revisável, cópia e canal manual para especialista.",
+    "Interface: gravação local, encerramento do microfone, WAV mono 16 kHz e texto revisável sem envio automático.",
+    "Interface: permissão negada mantém o atendimento por texto disponível.",
+    "Interface: nova conversa exige confirmação e limpa apenas o estado do navegador."
+  ],
+  "limite": "Mocks locais; sem teste de produção, microfone físico, renderização em navegador ou resposta real do Gemini."
+}
