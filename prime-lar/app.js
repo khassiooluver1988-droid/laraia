@@ -1,17 +1,17 @@
 (function () {
 'use strict';
 const API='https://dlynbiplzruxdhgwinyn.supabase.co/functions/v1/lara-chat';
-const VERSION='prime-lar-2.0';
+const VERSION='prime-lar-2.1';
 const SESSION_KEY='lara_prime_credentials_v2', HISTORY_KEY='lara_prime_tab_v2';
 const $=id=>document.getElementById(id);
 const field=$('message'),log=$('messages'),feedback=$('feedback');
 const greeting='Olá! Eu sou a Lara, assistente virtual da Prime Lar Imobiliária. Vou ajudar você a encontrar o caminho para seu novo lar. Como posso chamar você?';
 const avatar=document.querySelector('.avatar').src;
-let credentials=null,history=[],perfil={},busy=false,recording=false,requestingMic=false,audioBusy=false,lastFailure=null;
+let credentials=null,history=[],perfil={},etapa='nome',protocolo='',busy=false,recording=false,requestingMic=false,audioBusy=false,lastFailure=null;
 let recorder=null,stream=null,chunks=[],audioBlob=null,audioUrl=null,ticker=null,recordStarted=0,cancelRecording=false;
 try{credentials=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch{}
-try{const saved=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'null');if(saved&&saved.sessao===credentials?.sessao&&Array.isArray(saved.history)){history=saved.history.slice(-40);perfil=saved.perfil||{};}}catch{}
-function save(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify({sessao:credentials?.sessao,history:history.slice(-40),perfil}));}catch{}}
+try{const saved=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'null');if(saved&&saved.sessao===credentials?.sessao&&Array.isArray(saved.history)){history=saved.history.slice(-40);perfil=saved.perfil||{};etapa=saved.etapa||'livre';protocolo=saved.protocolo||'';}}catch{}
+function save(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify({sessao:credentials?.sessao,history:history.slice(-40),perfil,etapa,protocolo}));}catch{}}
 function saveCredentials(data){if(data.sessao&&data.token){credentials={sessao:data.sessao,token:data.token};try{localStorage.setItem(SESSION_KEY,JSON.stringify(credentials));}catch{}}}
 function bubble(text,mine=false,loading=false){
  const item=document.createElement('div');item.className='msg '+(mine?'me':'assistant');
@@ -23,11 +23,38 @@ function syncControls(){
  const block=busy||recording||requestingMic||audioBusy;
  $('send').disabled=block;field.disabled=recording||requestingMic||audioBusy;
  document.querySelectorAll('[data-message]').forEach(x=>x.disabled=block);
+ $('guideOptions').children&&Array.from($('guideOptions').children).forEach(x=>x.disabled=block);
  $('microphone').disabled=busy||requestingMic||audioBusy;
  $('newChat').disabled=block;$('specialist').disabled=block;
  $('startRecord').disabled=busy||requestingMic||audioBusy;
  $('stopRecord').disabled=audioBusy;$('transcribe').disabled=busy||audioBusy;
  $('discardAudio').disabled=audioBusy;
+}
+function optionsFor(stage,p){
+ const pick=(label,value=label)=>({label,value});
+ switch(stage){
+ case 'finalidade':return [pick('Comprar','Quero comprar um imóvel'),pick('Alugar','Quero alugar um imóvel')];
+ case 'tipo':return [pick('Casa','Tenho interesse em casa'),pick('Apartamento','Tenho interesse em apartamento')];
+ case 'orcamento':return p.finalidade==='alugar'?[pick('Até R$ 1 mil/mês'),pick('R$ 1 a 2 mil/mês'),pick('Acima de R$ 2 mil/mês'),pick('Preciso de orientação')]:[pick('Até R$ 200 mil'),pick('R$ 200 a 300 mil'),pick('R$ 300 a 500 mil'),pick('Acima de R$ 500 mil'),pick('Preciso de orientação')];
+ case 'ocupacao':return [pick('CLT / carteira assinada','Trabalho com carteira assinada (CLT)'),pick('Servidor / concursado','Sou servidor público ou concursado'),pick('Autônomo','Sou autônomo'),pick('MEI','Sou microempreendedor individual (MEI)'),pick('Empresário','Sou empresário'),pick('Aposentado / pensionista','Sou aposentado ou pensionista'),pick('Sem trabalho no momento'),pick('Prefiro não informar')];
+ case 'vinculo_publico':return [pick('Municipal','Meu vínculo é municipal'),pick('Estadual','Meu vínculo é estadual'),pick('Federal','Meu vínculo é federal'),pick('Outro vínculo'),pick('Prefiro não informar')];
+ case 'atividade':return [pick('Prefiro não informar')];
+ case 'renda':return [pick('Até R$ 2 mil/mês','Minha renda bruta mensal é até R$ 2 mil'),pick('R$ 2 a 4 mil/mês','Minha renda bruta mensal é de R$ 2 a 4 mil'),pick('R$ 4 a 7 mil/mês','Minha renda bruta mensal é de R$ 4 a 7 mil'),pick('Acima de R$ 7 mil/mês','Minha renda bruta mensal é acima de R$ 7 mil'),pick('Prefiro não informar')];
+ case 'intencao':return [pick('Sim, se fizer sentido','Sim, se as condições fizerem sentido para mim'),pick('Quero avaliar'),pick('Ainda estou pesquisando')];
+ case 'revisao':return [pick('Confirmar e gerar protocolo','Confirmo o resumo; pode gerar meu protocolo'),pick('Quero corrigir')];
+ default:return [];
+ }
+}
+function choose(value){
+ if(busy||recording||audioBusy||requestingMic)return;
+ if(field.value.trim()){field.value=[field.value.trim(),value].join('\n').slice(0,1500);fit();field.focus();feedback.textContent='A opção foi incluída no seu rascunho. Revise antes de enviar.';}else send(value);
+}
+function renderGuide(){
+ const options=optionsFor(etapa,perfil),host=$('guideOptions');host.replaceChildren();$('guide').hidden=!options.length;
+ $('guideTitle').textContent=etapa==='revisao'?'Confira antes de continuar':'Você pode escolher uma opção ou escrever';
+ for(const o of options){const b=document.createElement('button');b.type='button';b.className='shortcut';b.textContent=o.label;b.addEventListener('click',()=>choose(o.value));host.appendChild(b);}
+ const valid=/^(?:DEMO-)?PL-\d{8}-[A-Fa-f0-9]{32}$/.test(protocolo);
+ $('protocolBox').hidden=!valid;$('protocolValue').textContent=valid?protocolo:'';syncControls();
 }
 function showDialog(id){const d=$(id);if(typeof d.showModal==='function')d.showModal();else{d.setAttribute('open','');d.hidden=false;}}
 function closeDialog(id){const d=$(id);if(typeof d.close==='function')d.close();else d.removeAttribute('open');}
@@ -58,16 +85,16 @@ async function send(text){
   await ensureSession();const d=await call({acao:'chat',mensagem,request_id:requestId});
   if(typeof d.resposta!=='string'||!d.resposta.trim())throw Error('Não recebi uma resposta. Tente novamente.');
   reply.body.classList.remove('loading');reply.body.textContent=d.resposta;
-  perfil=d.perfil||perfil;history.push({role:'me',text:mensagem},{role:'lara',text:d.resposta});save();lastFailure=null;
+  perfil=d.perfil||perfil;etapa=d.etapa||'livre';if(d.protocolo)protocolo=d.protocolo;history.push({role:'me',text:mensagem},{role:'lara',text:d.resposta});renderGuide();save();lastFailure=null;
  }catch(e){
   mine.item.remove();reply.item.remove();if(!field.value.trim())field.value=mensagem;fit();lastFailure={text:mensagem,requestId};
   feedback.textContent=e.name==='AbortError'?'O atendimento demorou. Sua mensagem foi preservada; toque em Enviar para tentar novamente.':e.message;
  }finally{busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;}
 }
 function summaryText(){
- const names={nome:'Nome',finalidade:'Interesse',tipo:'Tipo de imóvel',localizacao:'Localização desejada',orcamento:'Orçamento',necessidades:'Preferências',prazo:'Prazo',pagamento:'Forma de pagamento',empreendimento:'Empreendimento'};
+ const names={nome:'Nome',finalidade:'Interesse',tipo:'Tipo de imóvel',localizacao:'Localização desejada',orcamento:'Orçamento',ocupacao:'Ocupação',vinculo_publico:'Vínculo público',atividade:'Atividade',renda_bruta:'Renda bruta mensal',intencao:'Momento de decisão',necessidades:'Preferências',prazo:'Prazo',pagamento:'Forma de pagamento',empreendimento:'Empreendimento'};
  const entries=Object.entries(names).filter(([k])=>typeof perfil[k]==='string'&&perfil[k].trim()).map(([k,label])=>label+': '+perfil[k].trim());
- return 'Olá, equipe Prime Lar! Conversei com a Lara e gostaria de continuar com um corretor especialista.\n\n'+(entries.length?entries.join('\n'):'Meu interesse: [descreva o imóvel que procura]');
+ return 'Olá, equipe Prime Lar! Conversei com a Lara e gostaria de continuar com um corretor especialista.\n'+(protocolo?'Protocolo da conversa: '+protocolo+'\n':'')+'\n'+(entries.length?entries.join('\n'):'Meu interesse: [descreva o imóvel que procura]');
 }
 function openSpecialist(){$('summary').value=summaryText();$('copyStatus').textContent='';showDialog('specialistDialog');}
 function resetAudio(){
@@ -130,13 +157,13 @@ async function transcribe(){
 $('form').addEventListener('submit',e=>{e.preventDefault();send(field.value);});
 field.addEventListener('input',fit);
 field.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send(field.value);}});
-document.querySelectorAll('[data-message]').forEach(b=>b.addEventListener('click',()=>{if(field.value.trim()){field.value=[field.value.trim(),b.dataset.message].join('\n').slice(0,1500);fit();field.focus();feedback.textContent='O interesse foi incluído no seu rascunho. Revise antes de enviar.';}else send(b.dataset.message);}));
+document.querySelectorAll('[data-message]').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.message)));
 $('specialist').addEventListener('click',openSpecialist);
 $('about').addEventListener('click',()=>showDialog('aboutDialog'));
 $('privacy').addEventListener('click',()=>showDialog('privacyDialog'));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeDialog(b.dataset.close)));
 $('newChat').addEventListener('click',()=>{if(!busy&&!recording&&!audioBusy&&!requestingMic)showDialog('resetDialog');});
-$('confirmReset').addEventListener('click',()=>{if(busy||recording||audioBusy||requestingMic)return;credentials=null;history=[];perfil={};lastFailure=null;try{localStorage.removeItem(SESSION_KEY);sessionStorage.removeItem(HISTORY_KEY);}catch{}discardAudio();renderHistory();field.value='';feedback.textContent='';fit();closeDialog('resetDialog');field.focus();});
+$('confirmReset').addEventListener('click',()=>{if(busy||recording||audioBusy||requestingMic)return;credentials=null;history=[];perfil={};etapa='nome';protocolo='';lastFailure=null;try{localStorage.removeItem(SESSION_KEY);sessionStorage.removeItem(HISTORY_KEY);}catch{}discardAudio();renderHistory();renderGuide();field.value='';feedback.textContent='';fit();closeDialog('resetDialog');field.focus();});
 $('copySummary').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('summary').value);$('copyStatus').textContent='Resumo copiado. Agora abra o Instagram e envie para a Prime Lar.';}catch{$('summary').focus();$('summary').select();$('copyStatus').textContent='Selecione e copie o texto acima para enviar no Instagram.';}});
 $('microphone').addEventListener('click',()=>{
  if(recording){recorder?.stop();return;}if(busy||audioBusy||requestingMic)return;
@@ -148,5 +175,5 @@ $('stopRecord').addEventListener('click',()=>{if(recorder?.state==='recording')r
 $('discardAudio').addEventListener('click',discardAudio);
 $('transcribe').addEventListener('click',transcribe);
 window.addEventListener('pagehide',()=>{cancelRecording=true;if(recorder?.state==='recording')recorder.stop();stream?.getTracks().forEach(t=>t.stop());if(ticker)clearInterval(ticker);if(audioUrl)URL.revokeObjectURL(audioUrl);});
-renderHistory();syncControls();fit();
+renderHistory();renderGuide();syncControls();fit();
 })();

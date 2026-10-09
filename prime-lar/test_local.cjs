@@ -5,7 +5,7 @@ const check=(s)=>checks.push(s);
 const tick=()=>new Promise(r=>setImmediate(r));
 
 async function backend(){
- let providerCalls=0,quotaCalls=0,quotaEnabled=true,providerFail=false,modelEmpty=false;
+ let providerCalls=0,quotaCalls=0,quotaEnabled=true,providerFail=false,modelEmpty=false,modelOverride=null;
  const sessions=[],messages=[],payloads=[];
  class Query{
   constructor(table){this.table=table;this.filters=[];this.operation='select';}
@@ -19,7 +19,7 @@ async function backend(){
    if(this.operation==='insert'){
     const data=Array.isArray(this.input)?this.input:[this.input];
     if(this.table==='lara_prime_mensagens'&&data.some(v=>rows.some(r=>r.sessao_id===v.sessao_id&&r.request_id===v.request_id&&r.papel===v.papel)))return {error:{code:'23505'}};
-    const inserted=data.map((v,i)=>({id:webcrypto.randomUUID(),ordem:rows.length+1+i,perfil:{},...v}));rows.push(...inserted);return {data:inserted,error:null};
+    const inserted=data.map((v,i)=>({id:webcrypto.randomUUID(),ordem:rows.length+1+i,criada_em:"2026-10-10T01:30:00Z",perfil:{},...v}));rows.push(...inserted);return {data:inserted,error:null};
    }
    const matches=rows.filter(r=>this.filters.every(([k,v])=>r[k]===v));
    if(this.operation==='update'){matches.forEach(r=>Object.assign(r,this.input));return {data:matches,error:null};}
@@ -30,7 +30,7 @@ async function backend(){
  const context={console,Response,Request,AbortSignal,TextEncoder,Uint8Array,crypto:webcrypto,atob,URL,setTimeout:(fn)=>{fn();return 0;},Deno:{env:{get:()=> 'fixture-key'}},withSupabase:(config,handler)=>(req)=>handler(req,{supabaseAdmin:db}),fetch:async(url,init)=>{
   providerCalls++;const p=JSON.parse(init.body);payloads.push(p);if(providerFail)return new Response('{}',{status:503});
   const isAudio=p.contents[0]?.parts?.[0]?.inlineData;
-  const obj=isAudio?{texto:modelEmpty?'':'Meu nome é Ana e quero alugar um apartamento.'}:{resposta:'Ana, você procura alugar um apartamento em Teresina. Qual é seu orçamento mensal?',perfil:{nome:'Ana',finalidade:'alugar',tipo:'apartamento',localizacao:'Teresina',orcamento:'R$ 1.500 por mês',necessidades:'',prazo:'',pagamento:'',empreendimento:'',extra:'não deve sair'},pronto_para_especialista:false};
+  const obj=isAudio?{texto:modelEmpty?'':'Meu nome é Ana e quero alugar um apartamento.'}:(modelOverride||{resposta:'Ana, você procura alugar um apartamento em Teresina. Qual é seu orçamento mensal?',perfil:{nome:'Ana',finalidade:'alugar',tipo:'apartamento',localizacao:'Teresina',orcamento:'R$ 1.500 por mês',necessidades:'',prazo:'',pagamento:'',empreendimento:'',extra:'não deve sair'},etapa:'ocupacao',pronto_para_especialista:false});
   return Response.json({candidates:[{content:{parts:[{text:JSON.stringify(obj)}]}}]});
  }};
  vm.createContext(context);const code=stripTypeScriptTypes(fs.readFileSync('index.ts','utf8')).replace(/^import .*;$/mg,'').replace('export default ','globalThis.edge = ');vm.runInContext(code,context);
@@ -58,6 +58,18 @@ async function backend(){
  check('Servidor: transcrição separada do chat, áudio inválido e fala vazia tratados.');
  const sanitized=vm.runInContext('sanitizarPerfil({nome:"CPF 123.456.789-00",extra:"x"})',context);assert.ok(!sanitized.nome.includes('123.456'));assert.equal(sanitized.extra,undefined);
  check('Servidor: perfil limitado aos campos previstos e CPF removido do resumo.');
+ const base={...first.data.perfil,finalidade:'comprar',orcamento:'R$ 200 mil (valor total)',ocupacao:'servidor público',vinculo_publico:'estadual',renda_bruta:'R$ 5.000 por mês',intencao:'quero avaliar',concordancia_resumo:'confirmado'};
+ modelOverride={resposta:'Atendimento concluído',perfil:base,etapa:'concluido',pronto_para_especialista:true,protocolo:'FAKE'};
+ const premature=await call({...cred,mensagem:'Meu orçamento é 200 mil',request_id:webcrypto.randomUUID()});assert.equal(premature.data.protocolo,'');assert.equal(premature.data.etapa,'revisao');assert.equal(premature.data.perfil.concordancia_resumo,'pendente');
+ check('Servidor: confirmação inventada pelo modelo não gera protocolo nem encerra a revisão.');
+ const closeId=webcrypto.randomUUID();const closed=await call({...cred,mensagem:'Confirmo o resumo; pode gerar meu protocolo',request_id:closeId});assert.equal(closed.status,200);assert.match(closed.data.protocolo,/^PL-20261009-[A-F0-9]{32}$/);assert.ok(closed.data.resposta.includes(closed.data.protocolo));assert.equal(closed.data.pronto_para_especialista,true);assert.equal(closed.data.perfil.renda_bruta,'R$ 5.000 por mês');
+ const repeated=await call({...cred,mensagem:'Confirmo',request_id:closeId});assert.equal(repeated.data.protocolo,closed.data.protocolo);
+ modelOverride={resposta:'Posso esclarecer suas dúvidas.',perfil:base,etapa:'livre',pronto_para_especialista:false};const later=await call({...cred,mensagem:'Como funciona uma visita?',request_id:webcrypto.randomUUID()});assert.equal(later.data.protocolo,closed.data.protocolo);
+ check('Servidor: protocolo usa a sessão e a data de Brasília, fica no histórico e permanece em reenvios e continuidade.');
+ const another=await call({acao:'iniciar'});modelOverride={resposta:'Vamos continuar com o especialista.',perfil:{nome:'Bia'},etapa:'concluido',pronto_para_especialista:true};
+ const human=await call({sessao:another.data.sessao,token:another.data.token,mensagem:'Quero falar com um corretor especialista',request_id:webcrypto.randomUUID()});assert.match(human.data.protocolo,/^PL-/);assert.notEqual(human.data.protocolo,closed.data.protocolo);assert.equal(human.data.perfil.renda_bruta,'');
+ check('Servidor: pedido direto de humano permite protocolo sem exigir renda ou cadastro completo.');
+
 }
 
 async function frontend(){
@@ -81,9 +93,9 @@ async function frontend(){
  const document={getElementById:id=>nodes[id],querySelector:()=>({src:'avatar-fixture'}),querySelectorAll:s=>s==='[data-message]'?shortcuts:closes,createElement:()=>new Element()};
  const context={console,document,window,navigator:{mediaDevices:{getUserMedia:async()=>{if(denied)throw Object.assign(Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){tracksStopped++;}}]};}},clipboard:{writeText:async()=>{}}},localStorage,sessionStorage,crypto:webcrypto,MediaRecorder:Recorder,Blob,DataView,ArrayBuffer,Uint8Array,Float32Array,btoa,AbortController,URL:{createObjectURL:()=> 'blob:fixture',revokeObjectURL(){}},Date,setTimeout,clearTimeout,setInterval,clearInterval,fetch:async(url,options)=>{
   const d=JSON.parse(options.body);calls.push(d);if(fail)throw Error('Conexão de teste indisponível');
-  if(d.acao==='iniciar')return Response.json({sessao:webcrypto.randomUUID(),token:webcrypto.randomUUID(),versao:'prime-lar-2.0',perfil:{}});
-  if(d.acao==='transcrever')return Response.json({texto:'Quero alugar um apartamento.',versao:'prime-lar-2.0'});
-  return Response.json({resposta:'Como posso chamar você?',versao:'prime-lar-2.0',perfil:{finalidade:'alugar',tipo:'apartamento'}});
+  if(d.acao==='iniciar')return Response.json({sessao:webcrypto.randomUUID(),token:webcrypto.randomUUID(),versao:'prime-lar-2.1',perfil:{}});
+  if(d.acao==='transcrever')return Response.json({texto:'Quero alugar um apartamento.',versao:'prime-lar-2.1'});
+  return Response.json({resposta:'Qual é sua ocupação?',etapa:'ocupacao',versao:'prime-lar-2.1',perfil:{finalidade:'alugar',tipo:'apartamento'}});
  }};
  vm.createContext(context);vm.runInContext(fs.readFileSync('app.js','utf8'),context);
  assert.ok(nodes.messages.children[1].children.at(-1).textContent.includes('Prime Lar'));shortcuts[1].dispatch('click');await tick();await tick();
@@ -105,5 +117,30 @@ async function frontend(){
  check('Interface: permissão negada mantém o atendimento por texto disponível.');
  nodes.newChat.dispatch('click');assert.equal(nodes.resetDialog.open,true);assert.ok(localStorage.getItem('lara_prime_credentials_v2'));nodes.confirmReset.dispatch('click');assert.equal(localStorage.getItem('lara_prime_credentials_v2'),null);assert.equal(nodes.message.value,'');
  check('Interface: nova conversa exige confirmação e limpa apenas o estado do navegador.');
+ const preview=fs.readFileSync('LARA_PRIME_LAR_PREVIA.html','utf8').match(/<script>([\s\S]*)<\/script>/)[1];
+ const loadPreview=()=>{for(const node of [...Object.values(nodes),...shortcuts,...closes])node.events={};vm.runInContext(preview,context);};
+ const say=async text=>{nodes.message.value=text;nodes.form.dispatch('submit');await tick();await tick();assert.equal(nodes.feedback.textContent,'');};
+ const select=async label=>{const b=nodes.guideOptions.children.find(x=>x.textContent===label);assert.ok(b,'Opção ausente: '+label);b.dispatch('click');await tick();await tick();};
+ const reset=()=>{nodes.newChat.dispatch('click');nodes.confirmReset.dispatch('click');};
+ const lastReply=()=>nodes.messages.children.at(-1).children.at(-1).textContent;
+ const beforePreviewCalls=calls.length;loadPreview();
+ await say('Oi');assert.ok(lastReply().includes('Como posso chamar'));
+ await say('Ana');await select('Comprar');await select('Casa');await say('Teresina');await say('200');assert.ok(lastReply().includes('reais ou em milhares'));
+ await say('200mil');assert.ok(lastReply().includes('ocupação'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='CLT / carteira assinada'));
+ await select('Servidor / concursado');assert.ok(lastReply().includes('municipal, estadual ou federal'));await select('Estadual');assert.ok(lastReply().includes('renda bruta mensal'));await say('5000');assert.ok(lastReply().includes('oportunidade de adquirir'));
+ await select('Sim, se fizer sentido');assert.ok(lastReply().includes('200mil'));assert.ok(lastReply().includes('5000'));assert.ok(lastReply().includes('estadual'));assert.equal(nodes.protocolBox.hidden,true);
+ check('Prévia: compra continua após orçamento com opções de trabalho, vínculo estadual, renda separada e revisão antes do protocolo.');
+ await select('Quero corrigir');await say('Minha renda bruta é R$ 4500');assert.ok(lastReply().includes('4500'));assert.ok(!lastReply().includes('5000'));await select('Confirmar e gerar protocolo');assert.match(nodes.protocolValue.textContent,/^DEMO-PL-\d{8}-[A-F0-9]{32}$/);assert.ok(lastReply().includes('não envia o resumo'));
+ nodes.specialist.dispatch('click');assert.ok(nodes.summary.value.includes('R$ 4500'));assert.ok(nodes.summary.value.includes('Protocolo da conversa'));const firstCode=nodes.protocolValue.textContent;
+ check('Prévia: correção da renda atualiza o resumo e confirmação gera protocolo demonstrativo copiável.');
+ loadPreview();assert.equal(nodes.protocolValue.textContent,firstCode);assert.equal(nodes.protocolBox.hidden,false);nodes.specialist.dispatch('click');assert.ok(nodes.summary.value.includes('R$ 4500'));
+ check('Prévia: recarregar a mesma aba preserva a qualificação e o protocolo da conversa.');
+ reset();await say('Carlos');await select('Alugar');await select('Apartamento');await say('Teresina');await say('R$ 1500');await select('Autônomo');assert.ok(lastReply().includes('atividade'));await say('Eletricista');await select('Prefiro não informar');assert.ok(lastReply().includes('conhecer as opções'));assert.ok(!lastReply().includes('adquirir'));await select('Quero avaliar');assert.ok(lastReply().includes('Eletricista'));assert.ok(lastReply().includes('prefiro não informar'));await select('Confirmar e gerar protocolo');assert.notEqual(nodes.protocolValue.textContent,firstCode);
+ check('Prévia: aluguel pergunta a atividade do autônomo, aceita recusa de renda e respeita a intenção de alugar.');
+ reset();await say('Maria');await select('Comprar');await select('Apartamento');await say('Teresina');await select('Preciso de orientação');await select('MEI');await say('Comércio de roupas');await say('Meu faturamento é R$ 10 mil');assert.ok(lastReply().includes('diferente da sua renda pessoal'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Até R$ 2 mil/mês'));await say('Minha renda bruta é R$ 3000');assert.ok(lastReply().includes('oportunidade'));await select('Ainda estou pesquisando');assert.ok(lastReply().includes('Ainda estou pesquisando'));
+ check('Prévia: MEI informa atividade e esclarece faturamento antes de registrar renda pessoal, sem pressionar quem pesquisa.');
+ reset();await say('Quero falar com um corretor especialista');assert.ok(!nodes.protocolBox.hidden);assert.ok(lastReply().includes('envie no Instagram'));assert.equal(calls.length,beforePreviewCalls);
+ check('Prévia: contato humano interrompe a triagem e toda a demonstração funciona sem enviar mensagens ao servidor.');
+
 }
 (async()=>{await backend();await frontend();fs.writeFileSync('validacao_local.json',JSON.stringify({status:'aprovado_localmente',checks,limite:'Mocks locais; sem teste de produção, microfone físico, renderização em navegador ou resposta real do Gemini.'},null,2));for(const c of checks)console.log('OK:',c);console.log('Total:',checks.length);})().catch(e=>{console.error(e);process.exitCode=1;});
