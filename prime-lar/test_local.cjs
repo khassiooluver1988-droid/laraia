@@ -59,8 +59,10 @@ async function backend(){
  const sanitized=vm.runInContext('sanitizarPerfil({nome:"CPF 123.456.789-00",extra:"x"})',context);assert.ok(!sanitized.nome.includes('123.456'));assert.equal(sanitized.extra,undefined);
  check('Servidor: perfil limitado aos campos previstos e CPF removido do resumo.');
  const base={...first.data.perfil,finalidade:'comprar',orcamento:'R$ 200 mil (valor total)',ocupacao:'servidor público',vinculo_publico:'estadual',renda_bruta:'R$ 5.000 por mês',intencao:'quero avaliar',concordancia_resumo:'confirmado'};
+ modelOverride={resposta:'Qual é sua renda bruta?',perfil:{...base,concordancia_resumo:'pendente'},etapa:'renda',pronto_para_especialista:false};
+ await call({...cred,mensagem:'Sou servidor estadual',request_id:webcrypto.randomUUID()});
  modelOverride={resposta:'Atendimento concluído',perfil:base,etapa:'concluido',pronto_para_especialista:true,protocolo:'FAKE'};
- const premature=await call({...cred,mensagem:'Meu orçamento é 200 mil',request_id:webcrypto.randomUUID()});assert.equal(premature.data.protocolo,'');assert.equal(premature.data.etapa,'revisao');assert.equal(premature.data.perfil.concordancia_resumo,'pendente');
+ const premature=await call({...cred,mensagem:'Sim',request_id:webcrypto.randomUUID()});assert.equal(premature.data.protocolo,'');assert.equal(premature.data.etapa,'revisao');assert.equal(premature.data.perfil.concordancia_resumo,'pendente');
  check('Servidor: confirmação inventada pelo modelo não gera protocolo nem encerra a revisão.');
  const closeId=webcrypto.randomUUID();const closed=await call({...cred,mensagem:'Confirmo o resumo; pode gerar meu protocolo',request_id:closeId});assert.equal(closed.status,200);assert.match(closed.data.protocolo,/^PL-20261009-[A-F0-9]{32}$/);assert.ok(closed.data.resposta.includes(closed.data.protocolo));assert.equal(closed.data.pronto_para_especialista,true);assert.equal(closed.data.perfil.renda_bruta,'R$ 5.000 por mês');
  const repeated=await call({...cred,mensagem:'Confirmo',request_id:closeId});assert.equal(repeated.data.protocolo,closed.data.protocolo);

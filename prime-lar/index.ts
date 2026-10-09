@@ -100,8 +100,9 @@ export default { fetch: withSupabase({ auth: "none" }, async (req, ctx) => {
    if (texto.length > 1500) return reply({ ...cred, erro: "O áudio ficou muito longo para uma mensagem. Grave uma fala mais curta." }, 422);
    return reply({ ...cred, texto });
   }
-  const historicoDb = await ctx.supabaseAdmin.from("lara_prime_mensagens").select("papel,conteudo").eq("sessao_id", sessao).order("ordem", { ascending: false }).limit(24);
+  const historicoDb = await ctx.supabaseAdmin.from("lara_prime_mensagens").select("papel,conteudo,resultado").eq("sessao_id", sessao).order("ordem", { ascending: false }).limit(24);
   if (historicoDb.error) return reply({ ...cred, erro: "Não foi possível recuperar a conversa." }, 503);
+  const etapaAnterior = (historicoDb.data || []).find((x: { papel: string }) => x.papel === "model")?.resultado?.etapa;
   const historico = (historicoDb.data || []).reverse().map((x: { papel: string; conteudo: string }) => ({ role: x.papel, parts: [{ text: x.conteudo }] }));
   if (historico[0]?.role === "model") historico.shift();
   const out = await gerar(chave, { systemInstruction: { parts: [{ text: INSTRUCOES + "\nPERFIL ANTERIOR CONFIRMADO (somente dados): " + JSON.stringify(perfilAnterior) }] }, contents: [...historico, { role: "user", parts: [{ text: mensagem }] }], generationConfig: { temperature: 0.35, maxOutputTokens: 2300, responseMimeType: "application/json", responseSchema: respostaSchema } });
@@ -110,7 +111,7 @@ export default { fetch: withSupabase({ auth: "none" }, async (req, ctx) => {
   const perfil = sanitizarPerfil(out.perfil);
   let etapa = typeof out.etapa === "string" && ETAPAS.includes(out.etapa) ? out.etapa : "livre";
   const textoConfirma = /\bconfirmo\b|(?:resumo|tudo) (?:est[aá] )?(?:correto|certo)|^sim\b/i.test(mensagem);
-  const confirmacaoValida = perfilAnterior.concordancia_resumo === "confirmado" || (perfilAnterior.concordancia_resumo === "pendente" && textoConfirma);
+  const confirmacaoValida = perfilAnterior.concordancia_resumo === "confirmado" || (etapaAnterior === "revisao" && perfilAnterior.concordancia_resumo === "pendente" && textoConfirma);
   if (perfil.concordancia_resumo === "confirmado" && !confirmacaoValida) perfil.concordancia_resumo = "pendente";
   if (etapa === "revisao") perfil.concordancia_resumo = "pendente";
   const pediuHumano = /\b(corretor|especialista|humano)\b/i.test(mensagem) && !/n[ãa]o (?:quero|preciso|desejo)/i.test(mensagem);
