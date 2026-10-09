@@ -58,6 +58,14 @@ async function backend(){
  check('Servidor: transcrição separada do chat, áudio inválido e fala vazia tratados.');
  const sanitized=vm.runInContext('sanitizarPerfil({nome:"CPF 123.456.789-00",extra:"x"})',context);assert.ok(!sanitized.nome.includes('123.456'));assert.equal(sanitized.extra,undefined);
  check('Servidor: perfil limitado aos campos previstos e CPF removido do resumo.');
+ const phone=vm.runInContext('sanitizarPerfil({telefone:"(86) 99999-9999",estado_civil:"casado"})',context);
+ assert.equal(phone.telefone,'(86) 99999-9999');assert.equal(phone.estado_civil,'casado');
+ const document=vm.runInContext('sanitizarPerfil({telefone:"CPF 123.456.789-00"})',context);assert.equal(document.telefone,'');
+ await call({...cred,mensagem:'Meu CPF é 123.456.789-00',request_id:webcrypto.randomUUID()});
+ assert.ok(!payloads.at(-1).contents.at(-1).parts[0].text.includes('123.456.789-00'));
+ assert.ok(!messages.at(-2).conteudo.includes('123.456.789-00'));
+ check('Servidor: WhatsApp preservado como contato; CPF identificado omitido antes do provedor e do histórico.');
+
  const base={...first.data.perfil,finalidade:'comprar',orcamento:'R$ 200 mil (valor total)',ocupacao:'servidor público',vinculo_publico:'estadual',renda_bruta:'R$ 5.000 por mês',intencao:'quero avaliar',concordancia_resumo:'confirmado'};
  modelOverride={resposta:'Qual é sua renda bruta?',perfil:{...base,concordancia_resumo:'pendente'},etapa:'renda',pronto_para_especialista:false};
  await call({...cred,mensagem:'Sou servidor estadual',request_id:webcrypto.randomUUID()});
@@ -92,12 +100,12 @@ async function frontend(){
  class AC{async decodeAudioData(){return {duration:1};}async close(){}}
  class OC{createBufferSource(){return {connect(){},start(){}};}async startRendering(){return {getChannelData:()=>new Float32Array([0,-1,1])};}}
  const window={isSecureContext:true,AudioContext:AC,OfflineAudioContext:OC,addEventListener(){}};
- const document={getElementById:id=>nodes[id],querySelector:()=>({src:'avatar-fixture'}),querySelectorAll:s=>s==='[data-message]'?shortcuts:closes,createElement:()=>new Element()};
+ const document={getElementById:id=>nodes[id],querySelector:()=>({src:'avatar-fixture'}),querySelectorAll:s=>s==='[data-message]'?shortcuts:closes,createElement:()=>new Element(),createElementNS:()=>new Element()};
  const context={console,document,window,navigator:{mediaDevices:{getUserMedia:async()=>{if(denied)throw Object.assign(Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){tracksStopped++;}}]};}},clipboard:{writeText:async()=>{}}},localStorage,sessionStorage,crypto:webcrypto,MediaRecorder:Recorder,Blob,DataView,ArrayBuffer,Uint8Array,Float32Array,btoa,AbortController,URL:{createObjectURL:()=> 'blob:fixture',revokeObjectURL(){}},Date,setTimeout,clearTimeout,setInterval,clearInterval,fetch:async(url,options)=>{
   const d=JSON.parse(options.body);calls.push(d);if(fail)throw Error('Conexão de teste indisponível');
-  if(d.acao==='iniciar')return Response.json({sessao:webcrypto.randomUUID(),token:webcrypto.randomUUID(),versao:'prime-lar-2.1',perfil:{}});
-  if(d.acao==='transcrever')return Response.json({texto:'Quero alugar um apartamento.',versao:'prime-lar-2.1'});
-  return Response.json({resposta:'Qual é sua ocupação?',etapa:'ocupacao',versao:'prime-lar-2.1',perfil:{finalidade:'alugar',tipo:'apartamento'}});
+  if(d.acao==='iniciar')return Response.json({sessao:webcrypto.randomUUID(),token:webcrypto.randomUUID(),versao:'prime-lar-2.3',perfil:{}});
+  if(d.acao==='transcrever')return Response.json({texto:'Quero alugar um apartamento.',versao:'prime-lar-2.3'});
+  return Response.json({resposta:'Qual é sua ocupação?',etapa:'ocupacao',versao:'prime-lar-2.3',perfil:{finalidade:'alugar',tipo:'apartamento'}});
  }};
  vm.createContext(context);vm.runInContext(fs.readFileSync('app.js','utf8'),context);
  assert.ok(nodes.messages.children[1].children.at(-1).textContent.includes('Prime Lar'));shortcuts[1].dispatch('click');await tick();await tick();
@@ -127,22 +135,30 @@ async function frontend(){
  const lastReply=()=>nodes.messages.children.at(-1).children.at(-1).textContent;
  const beforePreviewCalls=calls.length;loadPreview();
  await say('Oi');assert.ok(lastReply().includes('Como posso chamar'));
- await say('Ana');await select('Comprar');await select('Casa');await say('Teresina');await say('200');assert.ok(lastReply().includes('reais ou em milhares'));
+ await say('Ana');await select('Comprar');await select('Casa');await say('Teresina');await say('Mocambinho');await say('200');assert.ok(lastReply().includes('reais ou em milhares'));
  await say('200mil');assert.ok(lastReply().includes('ocupação'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='CLT / carteira assinada'));
- await select('Servidor / concursado');assert.ok(lastReply().includes('municipal, estadual ou federal'));await select('Estadual');assert.ok(lastReply().includes('renda bruta mensal'));await say('5000');assert.ok(lastReply().includes('oportunidade de adquirir'));
- await select('Sim, se fizer sentido');assert.ok(lastReply().includes('200mil'));assert.ok(lastReply().includes('5000'));assert.ok(lastReply().includes('estadual'));assert.equal(nodes.protocolBox.hidden,true);
+ await select('Servidor / concursado');assert.ok(lastReply().includes('municipal, estadual ou federal'));await select('Estadual');assert.ok(lastReply().includes('renda bruta mensal'));await say('5000');await select('Casado(a)');assert.ok(lastReply().includes('oportunidade de adquirir'));
+ await select('Sim, se fizer sentido');assert.ok(lastReply().includes('WhatsApp'));await say('(86) 99999-9999');assert.ok(lastReply().includes('200mil'));assert.ok(lastReply().includes('5000'));assert.ok(lastReply().includes('estadual'));assert.equal(nodes.protocolBox.hidden,true);
  check('Prévia: compra continua após orçamento com opções de trabalho, vínculo estadual, renda separada e revisão antes do protocolo.');
  await select('Quero corrigir');await say('Minha renda bruta é R$ 4500');assert.ok(lastReply().includes('4500'));assert.ok(!lastReply().includes('5000'));await select('Confirmar e gerar protocolo');assert.match(nodes.protocolValue.textContent,/^DEMO-PL-\d{8}-[A-F0-9]{32}$/);assert.ok(lastReply().includes('não envia o resumo'));
- nodes.specialist.dispatch('click');assert.ok(nodes.summary.value.includes('R$ 4500'));assert.ok(nodes.summary.value.includes('Protocolo da conversa'));const firstCode=nodes.protocolValue.textContent;
+ nodes.specialist.dispatch('click');assert.ok(nodes.summary.value.includes('R$ 4500'));assert.ok(nodes.summary.value.includes('(86) 99999-9999'));assert.ok(nodes.summary.value.includes('Casado(a)'));assert.ok(nodes.summary.value.includes('Mocambinho'));assert.ok(nodes.summary.value.includes('Protocolo da conversa'));const firstCode=nodes.protocolValue.textContent;
  check('Prévia: correção da renda atualiza o resumo e confirmação gera protocolo demonstrativo copiável.');
+ check('Prévia: bairro, estado civil e WhatsApp incluídos na revisão; recusa de contato não bloqueia o protocolo.');
  loadPreview();assert.equal(nodes.protocolValue.textContent,firstCode);assert.equal(nodes.protocolBox.hidden,false);nodes.specialist.dispatch('click');assert.ok(nodes.summary.value.includes('R$ 4500'));
  check('Prévia: recarregar a mesma aba preserva a qualificação e o protocolo da conversa.');
- reset();await say('Carlos');await select('Alugar');await select('Apartamento');await say('Teresina');await say('R$ 1500');await select('Autônomo');assert.ok(lastReply().includes('atividade'));await say('Eletricista');await select('Prefiro não informar');assert.ok(lastReply().includes('conhecer as opções'));assert.ok(!lastReply().includes('adquirir'));await select('Quero avaliar');assert.ok(lastReply().includes('Eletricista'));assert.ok(lastReply().includes('prefiro não informar'));await select('Confirmar e gerar protocolo');assert.notEqual(nodes.protocolValue.textContent,firstCode);
+ reset();await say('Carlos');await select('Alugar');await select('Apartamento');await say('Teresina');await select('Sem preferência de bairro');await say('R$ 1500');await select('Autônomo');assert.ok(lastReply().includes('atividade'));await say('Eletricista');await select('Prefiro não informar');await select('Prefiro não informar');assert.ok(lastReply().includes('conhecer as opções'));assert.ok(!lastReply().includes('adquirir'));await select('Quero avaliar');await select('Prefiro não informar');assert.ok(lastReply().includes('Eletricista'));assert.ok(lastReply().includes('prefiro não informar'));await select('Confirmar e gerar protocolo');assert.notEqual(nodes.protocolValue.textContent,firstCode);
  check('Prévia: aluguel pergunta a atividade do autônomo, aceita recusa de renda e respeita a intenção de alugar.');
- reset();await say('Maria');await select('Comprar');await select('Apartamento');await say('Teresina');await select('Preciso de orientação');await select('MEI');await say('Comércio de roupas');await say('Meu faturamento é R$ 10 mil');assert.ok(lastReply().includes('diferente da sua renda pessoal'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Até R$ 2 mil/mês'));await say('Minha renda bruta é R$ 3000');assert.ok(lastReply().includes('oportunidade'));await select('Ainda estou pesquisando');assert.ok(lastReply().includes('Ainda estou pesquisando'));
+ reset();await say('Maria');await select('Comprar');await select('Apartamento');await say('Teresina');await select('Sem preferência de bairro');await select('Preciso de orientação');await select('MEI');await say('Comércio de roupas');await say('Meu faturamento é R$ 10 mil');assert.ok(lastReply().includes('diferente da sua renda pessoal'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Até R$ 2 mil/mês'));await say('Minha renda bruta é R$ 3000');await select('Prefiro não informar');assert.ok(lastReply().includes('oportunidade'));await select('Ainda estou pesquisando');await select('Prefiro não informar');assert.ok(lastReply().includes('Ainda estou pesquisando'));
  check('Prévia: MEI informa atividade e esclarece faturamento antes de registrar renda pessoal, sem pressionar quem pesquisa.');
  reset();await say('Quero falar com um corretor especialista');assert.ok(!nodes.protocolBox.hidden);assert.ok(lastReply().includes('envie no Instagram'));assert.equal(calls.length,beforePreviewCalls);
  check('Prévia: contato humano interrompe a triagem e toda a demonstração funciona sem enviar mensagens ao servidor.');
+ reset();shortcuts[4].dispatch('click');await tick();await tick();assert.ok(lastReply().includes('grande novidade em Teresina'));assert.ok(lastReply().includes('2 quartos'));assert.ok(lastReply().includes('piscina'));assert.ok(!lastReply().includes('material divulgado'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Falar com especialista'));
+ await select('Continuar com a Lara');assert.ok(lastReply().includes('Como posso chamar'));await say('Bia');await select('Comprar');await select('Apartamento');assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Altos'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Demerval Lobão'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Timon'));await select('Timon');await select('Sem preferência de bairro');await select('Preciso de orientação');await say('Tenho pressa');assert.ok(lastReply().includes('especialista'));await select('Falar com especialista');assert.ok(!nodes.protocolBox.hidden);nodes.specialist.dispatch('click');assert.ok(nodes.summary.value.includes('Timon'));assert.ok(nodes.summary.value.includes('Village Pôr do Sol'));assert.ok(!nodes.summary.value.includes('Renda bruta mensal'));assert.equal(calls.length,beforePreviewCalls);
+ check('Prévia: Village apresenta benefícios e campanha, regiões ampliadas e contato direto sem exigir renda.');
+ const built=fs.readFileSync(fs.existsSync('../index.html')?'../index.html':'index.html','utf8');assert.ok(built.includes('id="laraPhoto"'));assert.ok(built.includes('data:image/webp;base64,'));assert.ok(built.includes('href="assets/prime-lar-logo.jpg"'));assert.ok(built.includes('class="brand-panel"'));assert.ok(built.includes('viewBox="0 0 360 360"'));assert.ok(built.includes('campaign-badge'));assert.ok(built.includes('Novidade'));assert.ok(!built.includes('__LARA_IMAGE__'));
+ const standalone=fs.readFileSync('LARA_PRIME_LAR_PREVIA.html','utf8');assert.ok(standalone.includes('data:image/webp;base64,'));assert.ok(standalone.includes('data:image/jpeg;base64,'));assert.ok(standalone.includes('data:image/jpeg;base64,'));assert.ok(!standalone.includes('Mensagens processadas por IA e registradas'));assert.ok(!/\bfetch\(/.test(standalone));
+ check('Interface: imagem antiga da Lara e marca Prime Lar incorporadas, perfil enquadrado e destaque de campanha; prévia sem dependência das imagens externas.');
+
 
 }
 (async()=>{await backend();await frontend();fs.writeFileSync('validacao_local.json',JSON.stringify({status:'aprovado_localmente',checks,limite:'Mocks locais; sem teste de produção, microfone físico, renderização em navegador ou resposta real do Gemini.'},null,2));for(const c of checks)console.log('OK:',c);console.log('Total:',checks.length);})().catch(e=>{console.error(e);process.exitCode=1;});

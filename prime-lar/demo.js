@@ -3,10 +3,11 @@ async function call(payload){
   const d={sessao:crypto.randomUUID(),token:crypto.randomUUID(),versao:VERSION,perfil:{}};saveCredentials(d);return d;
  }
  if(payload.acao==='transcrever')throw Error('A transcrição por IA aguarda implantação. Nesta prévia você pode gravar e ouvir o áudio localmente.');
- const m=(payload.mensagem||'').trim(),t=m.toLowerCase(),s={...perfil};
+ const m=omitirDocumentos((payload.mensagem||'').trim()),t=m.toLowerCase(),s={...perfil};
  const skip=/prefiro n[ãa]o|n[ãa]o (?:quero|vou) (?:informar|responder)|pular/i.test(m);
  const amount=/\d/.test(m),money=/(?:r\$|mil|reais|or[cç]amento)/i.test(m);
- const old=JSON.stringify(s);
+ const old=JSON.stringify(s),campaign=/village|p[oô]r do sol|porto do sol|primeiras parcelas/.test(t);
+ if(campaign)s.empreendimento='Village Pôr do Sol';
  if(/comprar|\bcompra\b/.test(t))s.finalidade='comprar';
  if(/alugar|aluguel/.test(t))s.finalidade='alugar';
  if(/apartamento/.test(t))s.tipo='apartamento';
@@ -14,7 +15,7 @@ async function call(payload){
  const n=m.match(/(?:me chamo|meu nome [ée])\s+([A-Za-zÀ-ÿ ]{2,35})/i);
  if(n)s.nome=n[1].split(/ e |,| quero/i)[0].trim();
  if(!s.nome&&etapa==='nome'&&!/compr|alug|interesse|village|im[oó]vel|apartamento|casa|quero|\?|^oi$|^ol[áa]$|bom dia|boa tarde|boa noite/.test(t)&&!amount&&m.split(/\s+/).length<=4)s.nome=m;
- if(etapa==='localizacao'&&!m.includes('?'))s.localizacao=skip?'prefiro não informar':m;
+ if(etapa==='localizacao'&&!m.includes('?')&&!/outra cidade|outra regi/.test(t))s.localizacao=skip?'prefiro não informar':m;
  else if(/teresina|mocambinho|pedra mole|zona norte|zona leste|buenos aires/.test(t))s.localizacao=m;
  const isIncome=/renda|recebo mensalmente/.test(t)||etapa==='renda';
  let explanation='';
@@ -40,6 +41,9 @@ async function call(payload){
   else if(/federal/.test(t))s.vinculo_publico='federal';
   else if(etapa==='vinculo_publico'&&(skip||/outro v[ií]nculo/.test(t)))s.vinculo_publico=skip?'prefiro não informar':'outro vínculo';
  }
+ if(etapa==='bairro'&&!m.includes('?'))s.bairro=skip?'prefiro não informar':m;
+ if(etapa==='estado_civil'&&!m.includes('?'))s.estado_civil=skip?'prefiro não informar':m;
+ if(etapa==='telefone')s.telefone=skip?'prefiro não informar':normalizarTelefone(m);
  if(etapa==='atividade'&&!m.includes('?'))s.atividade=skip?'prefiro não informar':m;
  if(etapa==='intencao'&&!m.includes('?'))s.intencao=m;
  if(old!==JSON.stringify(s))s.concordancia_resumo='pendente';
@@ -51,21 +55,29 @@ async function call(payload){
  else if(!s.finalidade)next='finalidade';
  else if(!s.tipo)next='tipo';
  else if(!s.localizacao)next='localizacao';
+ else if(!s.bairro)next='bairro';
  else if(!s.orcamento)next='orcamento';
  else if(!s.ocupacao)next='ocupacao';
  else if(/servidor|concursado/.test(s.ocupacao)&&!s.vinculo_publico)next='vinculo_publico';
  else if(/autônomo|MEI|empresário/.test(s.ocupacao)&&!s.atividade)next='atividade';
  else if(!s.renda_bruta)next='renda';
+ else if(!s.estado_civil)next='estado_civil';
  else if(!s.intencao)next='intencao';
+ else if(!s.telefone)next='telefone';
  else if(s.concordancia_resumo!=='confirmado')next='revisao';
  else next='concluido';
  if(humano)next='concluido';
+ else if(campaign||/tenho pressa|preciso com urg[eê]ncia|estou com pressa/.test(t))next='oferta_especialista';
  let resposta;
  switch(next){
  case 'nome':resposta='Vou guiar você nessa busca. Como posso chamar você?';break;
  case 'finalidade':resposta='Prazer, '+s.nome+'! Você procura um imóvel para comprar ou alugar?';break;
  case 'tipo':resposta=s.nome+', você tem preferência por casa ou apartamento?';break;
- case 'localizacao':resposta='Em qual cidade, bairro ou região você procura seu '+s.tipo+'?';break;
+ case 'localizacao':resposta='Você procura em Teresina, Altos, Demerval Lobão, Timon ou outra região? Pode escolher abaixo ou informar a cidade e o bairro.';break;
+ case 'bairro':resposta='Em qual bairro você gostaria de morar? Se ainda não escolheu, pode indicar que não tem preferência.';break;
+ case 'estado_civil':resposta='Você gostaria de informar seu estado civil para orientar o especialista? É opcional: solteiro(a), casado(a), união estável, divorciado(a), viúvo(a) ou prefiro não informar.';break;
+ case 'telefone':resposta='Qual é seu WhatsApp com DDD para o consultor da Prime Lar poder falar com você? Você pode optar por não informar e continuar pelo Instagram.';break;
+ case 'oferta_especialista':resposta='Posso ajudar a organizar sua busca ou orientar o contato direto com a equipe. Você prefere falar com um especialista agora ou continuar comigo?';break;
  case 'orcamento':resposta=s.finalidade==='alugar'?'Qual faixa de aluguel mensal seria confortável? Diga se inclui condomínio e IPTU.':'Qual faixa de valor total do imóvel você pretende considerar?';break;
  case 'ocupacao':resposta='Certo, '+s.nome+'. Atualmente, qual opção descreve melhor seu trabalho ou sua ocupação? Você pode escolher abaixo ou escrever.';break;
  case 'vinculo_publico':resposta='Seu vínculo no serviço público é municipal, estadual ou federal? Se preferir, pode informar outro vínculo ou pular.';break;
@@ -73,14 +85,15 @@ async function call(payload){
  case 'renda':resposta='Desculpe a pergunta, ela ajuda o especialista a orientar '+(s.finalidade==='alugar'?'sua busca':'sua simulação')+': qual é sua renda bruta mensal, antes dos descontos? Pode informar um valor, uma faixa ou preferir não responder.';break;
  case 'intencao':resposta=s.finalidade==='alugar'?'Se encontrarmos um imóvel adequado ao seu orçamento, gostaria de avançar para conhecer as opções?':'Se surgisse hoje uma oportunidade de adquirir seu imóvel, com condições que fizessem sentido para você, gostaria de avançar?';break;
  case 'revisao':{
-  const labels={nome:'Nome',finalidade:'Interesse',tipo:'Imóvel',localizacao:'Região',orcamento:'Orçamento',ocupacao:'Ocupação',vinculo_publico:'Vínculo',atividade:'Atividade',renda_bruta:'Renda bruta mensal',intencao:'Momento de decisão'};
+  const labels={nome:'Nome',finalidade:'Interesse',tipo:'Imóvel',localizacao:'Cidade / região',bairro:'Bairro',estado_civil:'Estado civil',telefone:'WhatsApp para retorno',orcamento:'Orçamento',ocupacao:'Ocupação',vinculo_publico:'Vínculo',atividade:'Atividade',renda_bruta:'Renda bruta mensal',intencao:'Momento de decisão'};
   resposta='Obrigada pelas respostas! Organizei seu resumo:\n'+Object.entries(labels).filter(([k])=>s[k]).map(([k,v])=>v+': '+s[k]).join('\n')+'\n\nO resumo está correto para continuar com o especialista?';break;
  }
- default:resposta='Obrigada por compartilhar suas preferências. A Prime Lar está aqui para ajudar você a encontrar oportunidades e as melhores condições para seu perfil, com clareza em cada etapa. Para passar seu resumo ao especialista, toque em Falar com especialista, revise, copie e envie no Instagram. A equipe poderá dar sequência depois de receber sua mensagem.';
+ default:resposta='Obrigada por compartilhar suas preferências. A Prime Lar está aqui para ajudar você a encontrar oportunidades e as melhores condições para seu perfil, com clareza em cada etapa. Para passar seu resumo ao especialista, toque em Falar com especialista, revise, copie e envie no Instagram. Quando o atendimento estiver ativo, suas respostas serão registradas para a equipe distribuir ao consultor, que fará o retorno pelo WhatsApp informado.';
  }
  if(explanation)resposta=explanation;
+ if(etapa==='telefone'&&!s.telefone&&!humano){next='telefone';resposta='Para contato, informe um WhatsApp com DDD, por exemplo (86) 99999-9999, ou escolha Prefiro não informar. Não envie CPF nem documentos.';}
  if(etapa==='revisao'&&/corrigir/.test(t)){next='livre';resposta='Claro. O que você deseja corrigir no resumo? Pode escrever a informação atualizada.';}
- if(/village|p[oô]r do sol|primeiras parcelas/.test(t))resposta='O material divulgado do Village Pôr do Sol menciona sinal a partir de R$ 100 e 12 primeiras parcelas de R$ 127. O especialista precisa confirmar vigência, unidade e regras para seu perfil.\n\n'+resposta;
+ if(campaign)resposta='Quero te apresentar uma grande novidade em Teresina: o Village Pôr do Sol, na região de Pedra Mole! São apartamentos de 2 quartos em um condomínio clube, com piscina e opções de lazer para a família. A Prime Lar tem condições especiais de campanha: sinal a partir de R$ 100 e 12 primeiras parcelas de R$ 127, conforme a unidade e seu perfil. Você prefere conhecer as condições com um especialista ou continuar comigo para organizar sua busca?';
  let codigo='';
  if(next==='concluido'){
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Fortaleza',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());

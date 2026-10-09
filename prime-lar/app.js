@@ -1,12 +1,11 @@
 (function () {
 'use strict';
 const API='https://dlynbiplzruxdhgwinyn.supabase.co/functions/v1/lara-chat';
-const VERSION='prime-lar-2.1';
+const VERSION='prime-lar-2.3';
 const SESSION_KEY='lara_prime_credentials_v2', HISTORY_KEY='lara_prime_tab_v2';
 const $=id=>document.getElementById(id);
 const field=$('message'),log=$('messages'),feedback=$('feedback');
-const greeting='Olá! Eu sou a Lara, assistente virtual da Prime Lar Imobiliária. Vou ajudar você a encontrar o caminho para seu novo lar. Como posso chamar você?';
-const avatar=document.querySelector('.avatar').src;
+const greeting='Olá! Eu sou a Lara, assistente virtual da Prime Lar Imobiliária. Vou ajudar você a organizar sua busca e continuar com um especialista. Como posso chamar você?';
 let credentials=null,history=[],perfil={},etapa='nome',protocolo='',busy=false,recording=false,requestingMic=false,audioBusy=false,lastFailure=null;
 let recorder=null,stream=null,chunks=[],audioBlob=null,audioUrl=null,ticker=null,recordStarted=0,cancelRecording=false;
 try{credentials=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch{}
@@ -15,7 +14,7 @@ function save(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify({sessao:cr
 function saveCredentials(data){if(data.sessao&&data.token){credentials={sessao:data.sessao,token:data.token};try{localStorage.setItem(SESSION_KEY,JSON.stringify(credentials));}catch{}}}
 function bubble(text,mine=false,loading=false){
  const item=document.createElement('div');item.className='msg '+(mine?'me':'assistant');
- if(!mine){const img=document.createElement('img');img.src=avatar;img.alt='';img.className='mini';item.appendChild(img);}
+ if(!mine){const portrait=document.createElementNS('http://www.w3.org/2000/svg','svg');portrait.setAttribute('class','mini');portrait.setAttribute('viewBox','0 0 360 360');portrait.setAttribute('aria-hidden','true');const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href','#laraPhoto');portrait.appendChild(use);item.appendChild(portrait);}
  const body=document.createElement('div');body.className='bubble'+(loading?' loading':'');body.textContent=text;item.appendChild(body);log.appendChild(item);log.scrollTop=log.scrollHeight;return {item,body};
 }
 function fit(){field.style.height='24px';field.style.height=Math.min(field.scrollHeight,112)+'px';}
@@ -30,11 +29,29 @@ function syncControls(){
  $('stopRecord').disabled=audioBusy;$('transcribe').disabled=busy||audioBusy;
  $('discardAudio').disabled=audioBusy;
 }
+function normalizarTelefone(value) {
+ if (typeof value !== 'string' || /\b(?:cpf|rg|documento)\b/i.test(value) || /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/.test(value)) return '';
+ if (/prefiro n[ãa]o|n[ãa]o (?:quero|vou) informar/i.test(value)) return 'prefiro não informar';
+ let digits=value.replace(/\D/g,'');
+ if (/^55/.test(digits) && [12,13].includes(digits.length)) digits=digits.slice(2);
+ if (!/^[1-9]\d(?:9\d{8}|[2-5]\d{7})$/.test(digits)) return '';
+ const local=digits.slice(2),split=local.length===9?5:4;
+ return '('+digits.slice(0,2)+') '+local.slice(0,split)+'-'+local.slice(split);
+}
+function omitirDocumentos(value) {
+ return value.replace(/\bCPF\s*(?:[:=]|[ée])?\s*\d[\d.\s-]{8,17}\d\b/gi,'[CPF omitido]').replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g,'[CPF omitido]').replace(/\bRG\s*(?:[:=]|[ée])?\s*\d[\d.\s-]{4,15}[\dxX]\b/gi,'[documento omitido]');
+}
+
 function optionsFor(stage,p){
  const pick=(label,value=label)=>({label,value});
  switch(stage){
  case 'finalidade':return [pick('Comprar','Quero comprar um imóvel'),pick('Alugar','Quero alugar um imóvel')];
  case 'tipo':return [pick('Casa','Tenho interesse em casa'),pick('Apartamento','Tenho interesse em apartamento')];
+ case 'localizacao':return [pick('Teresina'),pick('Altos'),pick('Demerval Lobão'),pick('Timon'),pick('Outra região','Quero informar outra cidade ou região')];
+ case 'bairro':return [pick('Sem preferência de bairro'),pick('Prefiro não informar')];
+ case 'estado_civil':return [pick('Solteiro(a)'),pick('Casado(a)'),pick('União estável'),pick('Divorciado(a)'),pick('Viúvo(a)'),pick('Prefiro não informar')];
+ case 'telefone':return [pick('Prefiro não informar')];
+ case 'oferta_especialista':return [pick('Falar com especialista','Quero falar diretamente com um especialista'),pick('Continuar com a Lara','Quero continuar com a Lara para organizar minha busca')];
  case 'orcamento':return p.finalidade==='alugar'?[pick('Até R$ 1 mil/mês'),pick('R$ 1 a 2 mil/mês'),pick('Acima de R$ 2 mil/mês'),pick('Preciso de orientação')]:[pick('Até R$ 200 mil'),pick('R$ 200 a 300 mil'),pick('R$ 300 a 500 mil'),pick('Acima de R$ 500 mil'),pick('Preciso de orientação')];
  case 'ocupacao':return [pick('CLT / carteira assinada','Trabalho com carteira assinada (CLT)'),pick('Servidor / concursado','Sou servidor público ou concursado'),pick('Autônomo','Sou autônomo'),pick('MEI','Sou microempreendedor individual (MEI)'),pick('Empresário','Sou empresário'),pick('Aposentado / pensionista','Sou aposentado ou pensionista'),pick('Sem trabalho no momento'),pick('Prefiro não informar')];
  case 'vinculo_publico':return [pick('Municipal','Meu vínculo é municipal'),pick('Estadual','Meu vínculo é estadual'),pick('Federal','Meu vínculo é federal'),pick('Outro vínculo'),pick('Prefiro não informar')];
@@ -92,7 +109,7 @@ async function send(text){
  }finally{busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;}
 }
 function summaryText(){
- const names={nome:'Nome',finalidade:'Interesse',tipo:'Tipo de imóvel',localizacao:'Localização desejada',orcamento:'Orçamento',ocupacao:'Ocupação',vinculo_publico:'Vínculo público',atividade:'Atividade',renda_bruta:'Renda bruta mensal',intencao:'Momento de decisão',necessidades:'Preferências',prazo:'Prazo',pagamento:'Forma de pagamento',empreendimento:'Empreendimento'};
+ const names={nome:'Nome',finalidade:'Interesse',tipo:'Tipo de imóvel',localizacao:'Cidade / região',bairro:'Bairro desejado',estado_civil:'Estado civil',telefone:'WhatsApp para retorno',orcamento:'Orçamento',ocupacao:'Ocupação',vinculo_publico:'Vínculo público',atividade:'Atividade',renda_bruta:'Renda bruta mensal',intencao:'Momento de decisão',necessidades:'Preferências',prazo:'Prazo',pagamento:'Forma de pagamento',empreendimento:'Empreendimento'};
  const entries=Object.entries(names).filter(([k])=>typeof perfil[k]==='string'&&perfil[k].trim()).map(([k,label])=>label+': '+perfil[k].trim());
  return 'Olá, equipe Prime Lar! Conversei com a Lara e gostaria de continuar com um corretor especialista.\n'+(protocolo?'Protocolo da conversa: '+protocolo+'\n':'')+'\n'+(entries.length?entries.join('\n'):'Meu interesse: [descreva o imóvel que procura]');
 }

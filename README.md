@@ -1,55 +1,55 @@
 # Lara — Prime Lar Imobiliária
 
-A versão 2.1 guia o cliente por nome, compra/aluguel, casa/apartamento, região e valor do imóvel; continua com ocupação, vínculo ou atividade, renda bruta mensal opcional, intenção de avançar e revisão do resumo. O fluxo respeita recusas e quem ainda pesquisa. Os botões de resposta acompanham a etapa acima da caixa de mensagem. A gravação é limitada a 60 segundos; o cliente pode ouvir, transcrever, revisar e enviar o texto.
+A versão 2.3 prepara a Lara para esclarecer dúvidas de compra e aluguel no site da Prime Lar, reunir as respostas em um resumo revisável e permitir o retorno do especialista pelo WhatsApp informado. O botão “Fale com a Lara” abre o painel; as opções de resposta ficam acima da caixa de mensagem.
 
-## Estado da entrega
+## Identidade e roteiro
 
-Implementação preparada e 23 verificações locais aprovadas com mocks de navegador, banco e provedor, incluindo a demonstração do roteiro completo. A implantação da Edge Function foi rejeitada pela revisão automática de aprovação por envolver processamento externo de mensagens e áudios pelo Gemini e registro de conversas em produção. A função ativa e o site principal continuam com a versão anterior. Este rascunho não dispara a publicação, cujo fluxo existente roda apenas na branch main.
+Por solicitação do gestor, o perfil e a capa usam a imagem antiga da Lara, já existente no index.html público da branch main deste repositório. legacy-avatar.txt preserva esse avatar 3D. A identidade da Prime Lar utiliza sua logomarca azul e dourada. A nova arte com uniforme não integra esta revisão.
 
-Foram criadas as tabelas vazias lara_prime_sessoes e lara_prime_mensagens no projeto existente. RLS foi habilitado e o acesso direto de anon/authenticated foi revogado. O serviço do servidor é quem fará o acesso. Isso ainda não ativou o atendimento da Prime Lar.
+O atendimento pergunta nome, intenção de comprar ou alugar, tipo de imóvel, cidade, bairro e orçamento. Pode continuar com ocupação, vínculo ou atividade, renda bruta mensal, estado civil e intenção de avançar. Renda, estado civil e contato são voluntários; o cliente pode pular perguntas ou pedir um especialista. Orçamento de compra ou aluguel é distinto da renda pessoal. CPF e documentos não são solicitados; a Lara não aprova crédito.
 
-## Arquivos
+CLT/carteira assinada é uma opção. Servidor público/concursado pode indicar vínculo municipal, estadual ou federal. Autônomo, MEI e empresário podem informar atividade; faturamento do negócio pede esclarecimento antes de ser tratado como renda pessoal. A cobertura inclui Teresina, Altos, Demerval Lobão e Timon.
 
-- index.html na raiz: interface pronta para implantação.
-- prime-lar/index.ts: função lara-chat proposta, usando a chave Gemini já configurada no servidor.
-- prime-lar/schema.sql: estrutura de dados da Prime Lar, separada das sessões anteriores.
-- prime-lar/PROMPT_LARA_PRIME_LAR.txt: identidade, base comercial, abordagem consultiva, dúvidas e limites.
+Village Pôr do Sol tem destaque próprio, benefícios e condições de campanha fornecidas pelo gestor. Valores e regras dependem de confirmação de vigência, unidade e perfil pelo especialista. As primeiras parcelas de R$ 127 não são apresentadas como prestação permanente do financiamento.
+
+## Resumo e distribuição manual
+
+A Lara pede WhatsApp com DDD para o retorno do especialista. O resumo reúne informações declaradas e pode ser corrigido antes da confirmação. O servidor gera PL-AAAAMMDD-UUID com a data da sessão em Brasília e o UUID completo; reenvios preservam a referência. A prévia usa DEMO-PL.
+
+O resultado confirmado será registrado no Supabase para o gestor consultar e distribuir manualmente. CONSULTAR_ATENDIMENTOS.sql seleciona os resumos confirmados com telefone a partir das mensagens efetivamente salvas. O especialista retornará após essa distribuição. Nenhum prazo em instantes ou 24 horas foi definido. https://www.instagram.com/primelarimobiliaria/ permanece como alternativa de contato e compartilhamento manual de cópia.
+
+## Áudio e dados propostos
+
+A gravação é limitada a 60 segundos. O cliente pode ouvir, solicitar transcrição, revisar e enviar o texto separadamente. Em produção, o áudio será enviado via servidor ao Gemini para transcrição; o arquivo não é salvo nas tabelas de histórico desta aplicação. Mensagens e texto enviado são processados pelo Gemini e registrados no banco. Dados declarados voluntariamente podem compor o perfil.
+
+As tabelas lara_prime_sessoes e lara_prime_mensagens já existem no projeto dlynbiplzruxdhgwinyn, com RLS habilitado e acesso direto de anon/authenticated revogado. O acesso ocorre pelo servidor; cada sessão usa token cujo hash é armazenado. CPF no formato usual ou texto identificado como CPF/RG é omitido antes do envio da mensagem de texto ao provedor e do histórico. Essa detecção não cobre todo dado pessoal que alguém possa informar nem remove dados do áudio antes da transcrição.
+
+O navegador usa localStorage para a referência de acesso e sessionStorage para o histórico da aba. Nova conversa limpa o estado local sem apagar registros do servidor. O limite existente de 100 chamadas diárias ao provedor inclui transcrições.
+
+## Arquivos e reprodução
+
+- index.html na raiz: interface compilada.
+- assets/prime-lar-logo.jpg: logomarca.
 - prime-lar/template.html e app.js: fontes da interface.
-- prime-lar/demo.js: respostas locais da prévia, sem chamar o servidor.
-- prime-lar/build_local.cjs: compila a interface, a prévia e sincroniza as instruções da função.
-- prime-lar/test_local.cjs e validacao_local.json: testes e resultado local.
+- prime-lar/legacy-avatar.txt: avatar antigo incorporado.
+- prime-lar/PROMPT_LARA_PRIME_LAR.txt: roteiro e instruções da IA.
+- prime-lar/index.ts e schema.sql: função proposta e estrutura de dados.
+- prime-lar/demo.js e widget-preview-template.html: respostas e botão demonstrativos.
+- prime-lar/build_local.cjs: compilação e sincronização das instruções.
+- prime-lar/test_local.cjs e validacao_local.json: verificações locais.
+- prime-lar/widget.js e EMBED_LARA.html: botão e modelo de inclusão no site.
+- prime-lar/CONSULTAR_ATENDIMENTOS.sql: consulta para distribuição pelo gestor.
 
-## Ocupação, renda e protocolo
+Execute `cd prime-lar`, `node --no-warnings build_local.cjs` e `node --no-warnings test_local.cjs` em Node com stripTypeScriptTypes. A compilação gera a interface na raiz e as prévias autossuficientes em prime-lar. Em uma pasta isolada de trabalho, usa o index.html local.
 
-CLT/carteira assinada é uma só opção. Servidor público/concursado recebe opções municipal, estadual e federal; autônomo, MEI e empresário informam atividade. Aposentado/pensionista, sem trabalho no momento e recusa também são aceitos. Não se infere renda, elegibilidade ou aprovação pelo vínculo. A renda é pessoal, bruta e mensal; faturamento do negócio pede esclarecimento.
+## Validação e implantação
 
-O resumo inclui somente informações declaradas e pode ser corrigido ou editado antes de copiar. O protocolo é gerado pelo servidor após confirmação do resumo ou pedido direto de humano. Usa a data de criação da sessão em Brasília e o UUID completo, no formato PL-AAAAMMDD-IDENTIFICADOR. O mesmo atendimento conserva a referência em reenvios; outra sessão recebe outra referência. Não é o número de uma análise de crédito nem comprovante de envio à equipe. Na prévia aparece com prefixo DEMO-PL.
+As 27 verificações locais passaram com simulações de navegador, banco e provedor. Cobrem sessão/token, origem, cota, histórico, reenvio, falhas, transcrição separada do envio, resumo, protocolo estável, correção, recusa, compra, aluguel, renda versus orçamento, campanha e identidade. widget.js também recebeu verificação de sintaxe.
 
-## Continuidade com especialista
+A prévia serve para a dona da Prime Lar avaliar identidade e sequência de atendimento. Respostas demonstrativas não validam respostas livres do Gemini. Faltam testes com Gemini real, navegador e microfone físico.
 
-O canal informado e configurado é https://www.instagram.com/primelarimobiliaria/. O cliente revisa e copia o resumo, abre o perfil e decide se envia uma mensagem privada. Não há transferência automática, notificação à equipe ou WhatsApp confirmado. O número oficial e uma integração de encaminhamento precisam ser definidos para acrescentar esses recursos.
+A função ativa lara-chat permanece na versão 8. A substituição foi rejeitada pela revisão automática por falta de autorização explícita para mensagens/áudios no Gemini e conversa/perfil registrados em produção. O rascunho não foi mesclado; o workflow publica apenas mudanças na main. A implantação deve coordenar função e interface compatíveis, validar o atendimento real e só então publicar a interface.
 
-## Dados e processamento propostos para produção
+O widget abre um iframe com permissão de microfone delegada e descarrega o painel ao fechar. HTTPS e autorização do navegador são necessários para áudio. O site que receberá o botão ainda não foi informado; nenhuma página externa foi alterada. A integração futura com WhatsApp não foi implementada.
 
-- Mensagem digitada ou texto transcrito: enviado pelo servidor ao Gemini para gerar a resposta e registrado no banco de atendimento.
-- Áudio: gravado temporariamente no navegador e, somente ao tocar em Transcrever, enviado via servidor ao Gemini. O arquivo de áudio não é salvo nas tabelas de histórico desta aplicação.
-- Texto transcrito: retorna ao rascunho. Só entra no chat depois de o cliente revisar e tocar em Enviar.
-- Conversas: guardadas em tabelas próprias da Prime Lar. Cada sessão tem token de acesso, cujo hash é guardado no servidor.
-- Qualificação: ocupação, vínculo/atividade e renda bruta mensal voluntariamente declarados são processados junto da conversa e preservados no perfil. O cliente pode pular a pergunta e retirar dados do resumo que enviará à equipe.
-- Navegador: identificador em localStorage e histórico exibido em sessionStorage. Nova conversa limpa o estado local, sem apagar os registros do servidor.
-- Limite diário: reutiliza o limite existente de 100 chamadas ao provedor por dia, também consumido pelas transcrições. Não representa capacidade comercial ilimitada.
-
-## Informações que precisam ser confirmadas
-
-- WhatsApp oficial, corretor/equipe que recebe os leads, horário e aviso de privacidade oficial.
-- Endereço de atendimento: os textos apresentam Av. Jerumenha, 5428 e Rua Eng. Miguel Furtado Bacelar, 3415, Sala B, além de bairros divergentes.
-- Village Pôr do Sol: campanha com R$ 100, primeiras parcelas de R$ 127, entrada em até 72 vezes e benefícios de taxas precisa ter vigência, unidade, tabela e regras verificadas. A IA não pode dizer que R$ 127 é uma prestação permanente do financiamento.
-- Logo e identidade oficial: o Instagram não pôde ser conferido integralmente. A interface usa azul e mantém o avatar anterior da Lara; a marca está escrita em texto, sem alegar reprodução de uma logo oficial.
-
-## Validação
-
-Executar `cd prime-lar && node --no-warnings build_local.cjs && node --no-warnings test_local.cjs` em Node com stripTypeScriptTypes. No checkout, o compilador lê e atualiza index.html da raiz, reaproveitando o avatar. Em uma pasta de trabalho isolada, usa o index.html local. O arquivo de prévia gerado serve somente para revisar respostas demonstrativas.
-
-Os testes verificam sessão, origem, entrada, cota, histórico, idempotência, falhas, transcrição separada do envio, rascunho, resumo, permissão do microfone, reset, continuidade da triagem, renda distinta do orçamento, correção, recusa, aluguel, faturamento versus renda e protocolo estável. Um código inventado pelo modelo não é utilizado como referência do atendimento.
-
-Não houve teste em produção da versão proposta, resposta real do Gemini, microfone físico ou renderização em navegador. O ambiente não disponibiliza o controle de navegador exigido pelo fluxo de Sites. Depois da autorização, implantar primeiro a função, testar compra/aluguel/dúvidas/transcrição, publicar a interface e confirmar o resultado do GitHub Pages. Não mesclar este rascunho antes disso.
+A equipe ainda deve confirmar contato oficial, responsável pela distribuição, horário, aviso de privacidade, endereço e vigência/regras da campanha. A base recebida contém endereços divergentes; a Lara não deve escolher um endereço definitivo sem confirmação.
