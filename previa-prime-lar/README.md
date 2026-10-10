@@ -1,7 +1,3 @@
-# Prévia Lara — Prime Lar
+# Lara Prime Lar — atendimento real
 
-Demonstração do roteiro e da identidade da Prime Lar para avaliação no navegador do celular. index.html contém o painel completo; botao.html demonstra o botão abrindo o painel.
-
-As respostas são locais e demonstrativas. Não há chamada ao Gemini ou Supabase, envio de mensagens/áudios ao servidor ou encaminhamento de atendimentos. O avatar antigo e a logomarca estão incorporados. A transcrição real permanece desativada.
-
-A função de atendimento e a interface principal continuam independentes desta prévia.
+Este endereço e a página do botão agora redirecionam para o atendimento real na raiz do site. A função lara-chat versão 9 teve resposta real do Gemini e persistência confirmadas com dados fictícios. A revisão visual 2.4 utiliza a nova personagem digital da Lara e a logomarca recebida.

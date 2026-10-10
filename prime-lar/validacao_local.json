@@ -1,0 +1,33 @@
+{
+  "status": "aprovado_localmente",
+  "checks": [
+    "Servidor: origem, validação de entrada e criação da conversa sem consumir IA.",
+    "Servidor: identificador sem token correto não acessa a conversa.",
+    "Servidor: mensagens salvas em par e reenvio sem duplicar resposta, histórico ou chamada de IA.",
+    "Servidor: ordem das mensagens e perfil anterior preservam o contexto.",
+    "Servidor: cota e falha do provedor retornam erro sem histórico parcial.",
+    "Servidor: transcrição separada do chat, áudio inválido e fala vazia tratados.",
+    "Servidor: perfil limitado aos campos previstos e CPF removido do resumo.",
+    "Servidor: WhatsApp preservado como contato; CPF identificado omitido antes do provedor e do histórico.",
+    "Servidor: confirmação inventada pelo modelo não gera protocolo nem encerra a revisão.",
+    "Servidor: protocolo usa a sessão e a data de Brasília, fica no histórico e permanece em reenvios e continuidade.",
+    "Servidor: pedido direto de humano permite protocolo sem exigir renda ou cadastro completo.",
+    "Interface: abertura da Prime Lar, botão Alugar, envio e desbloqueio após resposta.",
+    "Interface: atalhos preservam o rascunho existente e exigem revisão.",
+    "Interface: falha preserva a mensagem e usa o mesmo identificador no reenvio.",
+    "Interface: resumo revisável, cópia e canal manual para especialista.",
+    "Interface: gravação local, encerramento do microfone, WAV mono 16 kHz e texto revisável sem envio automático.",
+    "Interface: permissão negada mantém o atendimento por texto disponível.",
+    "Interface: nova conversa exige confirmação e limpa apenas o estado do navegador.",
+    "Prévia: compra continua após orçamento com opções de trabalho, vínculo estadual, renda separada e revisão antes do protocolo.",
+    "Prévia: correção da renda atualiza o resumo e confirmação gera protocolo demonstrativo copiável.",
+    "Prévia: bairro, estado civil e WhatsApp incluídos na revisão; recusa de contato não bloqueia o protocolo.",
+    "Prévia: recarregar a mesma aba preserva a qualificação e o protocolo da conversa.",
+    "Prévia: aluguel pergunta a atividade do autônomo, aceita recusa de renda e respeita a intenção de alugar.",
+    "Prévia: MEI informa atividade e esclarece faturamento antes de registrar renda pessoal, sem pressionar quem pesquisa.",
+    "Prévia: contato humano interrompe a triagem e toda a demonstração funciona sem enviar mensagens ao servidor.",
+    "Prévia: Village apresenta benefícios e campanha, regiões ampliadas e contato direto sem exigir renda.",
+    "Interface: nova imagem digital da Lara e marca Prime Lar incorporadas, perfil enquadrado e destaque de campanha; prévia sem dependência das imagens externas."
+  ],
+  "limite": "Mocks locais; sem teste de produção, microfone físico, renderização em navegador ou resposta real do Gemini."
+}
