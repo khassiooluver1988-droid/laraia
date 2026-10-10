@@ -3,11 +3,12 @@ const html=fs.readFileSync('template.html','utf8'),app=fs.readFileSync('app.js',
 const target='../index.html';
 const assetDir=target.startsWith('../')?'../assets':'assets';
 const dataUri=(name,mime)=>'data:'+mime+';base64,'+fs.readFileSync(assetDir+'/'+name).toString('base64');
-const build=(script,local=false)=>html.replace('__LARA_IMAGE__',()=>local?dataUri('lara-prime-lar.webp','image/webp'):'assets/lara-prime-lar.webp').replace('__LOGO_IMAGE__',()=>local?dataUri('prime-lar-logo.jpg','image/jpeg'):'assets/prime-lar-logo.jpg').replace('__APP_SCRIPT__',()=>script);
+const build=(script,local=false)=>html.replace('__LARA_IMAGE__',()=>local?dataUri('lara-prime-lar.webp','image/webp'):'assets/lara-prime-lar.webp').replace('__LOGO_IMAGE__',()=>local?dataUri('prime-lar-logo.jpg','image/jpeg'):'assets/prime-lar-logo.jpg').replace('__APP_SCRIPT__',()=>script.replaceAll('__VILLAGE_IMAGE__',local?dataUri('village-por-do-sol.webp','image/webp'):'assets/village-por-do-sol.webp'));
 fs.writeFileSync(target,build(app));
 const prompt=fs.readFileSync('PROMPT_LARA_PRIME_LAR.txt','utf8');
-const edge=fs.readFileSync('index.ts','utf8').replace(/^const INSTRUCOES = .*;$/m,()=> 'const INSTRUCOES = '+JSON.stringify(prompt)+';');
+const edge=fs.readFileSync('index.ts','utf8').replace(/^const INSTRUCOES = .*;$/m,()=> 'const INSTRUCOES = '+JSON.stringify(prompt)+';').replace(/\/\/ __ATENDIMENTO_HELPERS__(?:[\s\S]*?\/\/ __FIM_HELPERS__)?/,()=> '// __ATENDIMENTO_HELPERS__\n'+fs.readFileSync('atendimento_helpers.ts','utf8')+'\n// __FIM_HELPERS__');
 fs.writeFileSync('index.ts',edge);
+fs.writeFileSync('edge-bundle.ts',edge);
 let demoApp=app.replace(/const SESSION_KEY=.*;/,'const SESSION_KEY="lara_prime_review_credentials_v23", HISTORY_KEY="lara_prime_review_tab_v23";');
 const start=demoApp.indexOf('async function call('),end=demoApp.indexOf('async function ensureSession',start);
 demoApp=demoApp.slice(0,start)+fs.readFileSync('demo.js','utf8')+'\n'+demoApp.slice(end);
@@ -24,3 +25,4 @@ fs.writeFileSync('LARA_PRIME_LAR_PREVIA.html',preview);
 console.log('Interface e prévia compiladas; roteiro sincronizado com a função.');
 
 if(fs.existsSync('widget-preview-template.html'))fs.writeFileSync('LARA_PRIME_LAR_WIDGET_PREVIA.html',fs.readFileSync('widget-preview-template.html','utf8').replace('__PREVIEW_DATA__',()=>JSON.stringify(preview).replace(/</g,'\\u003c')));
+

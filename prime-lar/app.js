@@ -2,11 +2,13 @@
 'use strict';
 const API='https://dlynbiplzruxdhgwinyn.supabase.co/functions/v1/lara-chat';
 const VERSION='prime-lar-2.3';
+const VILLAGE_IMAGE='__VILLAGE_IMAGE__';
 const SESSION_KEY='lara_prime_credentials_v2', HISTORY_KEY='lara_prime_tab_v2';
 const $=id=>document.getElementById(id);
 const field=$('message'),log=$('messages'),feedback=$('feedback');
 const greeting='Olá! Eu sou a Lara, assistente virtual da Prime Lar Imobiliária. Vou ajudar você a organizar sua busca e continuar com um especialista. Como posso chamar você?';
 let credentials=null,history=[],perfil={},etapa='nome',protocolo='',busy=false,recording=false,requestingMic=false,audioBusy=false,lastFailure=null;
+let villageCardVisible=false;
 let recorder=null,stream=null,chunks=[],audioBlob=null,audioUrl=null,ticker=null,recordStarted=0,cancelRecording=false;
 try{credentials=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch{}
 try{const saved=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'null');if(saved&&saved.sessao===credentials?.sessao&&Array.isArray(saved.history)){history=saved.history.slice(-40);perfil=saved.perfil||{};etapa=saved.etapa||'livre';protocolo=saved.protocolo||'';}}catch{}
@@ -18,13 +20,20 @@ function bubble(text,mine=false,loading=false){
  const body=document.createElement('div');body.className='bubble'+(loading?' loading':'');body.textContent=text;item.appendChild(body);log.appendChild(item);log.scrollTop=log.scrollHeight;return {item,body};
 }
 function fit(){field.style.height='24px';field.style.height=Math.min(field.scrollHeight,112)+'px';}
+function selectedShortcut(value){
+ const purpose=value==='Quero comprar um imóvel'?'comprar':value==='Quero alugar um imóvel'?'alugar':'';
+ const type=value==='Tenho interesse em casa'?'casa':value==='Tenho interesse em apartamento'?'apartamento':'';
+ if(purpose)return {locked:['comprar','alugar'].includes(perfil.finalidade),selected:perfil.finalidade===purpose};
+ if(type)return {locked:['casa','apartamento'].includes(perfil.tipo),selected:perfil.tipo===type};
+ return {locked:false,selected:false};
+}
 function syncControls(){
  const block=busy||recording||requestingMic||audioBusy;
  $('send').disabled=block;field.disabled=recording||requestingMic||audioBusy;
- document.querySelectorAll('[data-message]').forEach(x=>x.disabled=block);
+ document.querySelectorAll('[data-message]').forEach(x=>{const state=selectedShortcut(x.dataset.message);x.disabled=block||state.locked;x.setAttribute('aria-pressed',String(state.selected));});
  $('guideOptions').children&&Array.from($('guideOptions').children).forEach(x=>x.disabled=block);
  $('microphone').disabled=busy||requestingMic||audioBusy;
- $('newChat').disabled=block;$('specialist').disabled=block;
+ $('newChat').disabled=block;$('specialist').disabled=block;$('help').disabled=block;
  $('startRecord').disabled=busy||requestingMic||audioBusy;
  $('stopRecord').disabled=audioBusy;$('transcribe').disabled=busy||audioBusy;
  $('discardAudio').disabled=audioBusy;
@@ -64,20 +73,23 @@ function optionsFor(stage,p){
 }
 function choose(value){
  if(busy||recording||audioBusy||requestingMic)return;
+ if(selectedShortcut(value).locked)return;
+ closeDialog('helpDialog');
  if(field.value.trim()){field.value=[field.value.trim(),value].join('\n').slice(0,1500);fit();field.focus();feedback.textContent='A opção foi incluída no seu rascunho. Revise antes de enviar.';}else send(value);
 }
 function renderGuide(){
  const options=optionsFor(etapa,perfil),host=$('guideOptions');host.replaceChildren();$('guide').hidden=!options.length;
  $('guideTitle').textContent=etapa==='revisao'?'Confira antes de continuar':'Você pode escolher uma opção ou escrever';
  for(const o of options){const b=document.createElement('button');b.type='button';b.className='shortcut';b.textContent=o.label;b.addEventListener('click',()=>choose(o.value));host.appendChild(b);}
- const valid=/^(?:DEMO-)?PL-\d{8}-[A-Fa-f0-9]{32}$/.test(protocolo);
+ const valid=/^(?:(?:DEMO-)?PL-\d{8}-[A-Fa-f0-9]{32}|(?:TESTE-)?PL\/\d{4}\/\d{8,})$/.test(protocolo);
  $('protocolBox').hidden=!valid;$('protocolValue').textContent=valid?protocolo:'';syncControls();
+ $('protocolSubject').textContent=valid?[perfil.finalidade==='comprar'?'Compra':perfil.finalidade==='alugar'?'Aluguel':'Orientação',perfil.tipo,perfil.localizacao].filter(Boolean).join(' · '):'';
 }
 function showDialog(id){const d=$(id);if(typeof d.showModal==='function')d.showModal();else{d.setAttribute('open','');d.hidden=false;}}
 function closeDialog(id){const d=$(id);if(typeof d.close==='function')d.close();else d.removeAttribute('open');}
 function renderHistory(){
- log.replaceChildren();const cap=document.createElement('p');cap.className='caption';cap.textContent='Um novo começo pode começar aqui';log.appendChild(cap);
- bubble(greeting);history.forEach(m=>{if(m&&typeof m.text==='string')bubble(m.text,m.role==='me');});
+ villageCardVisible=false;log.replaceChildren();const cap=document.createElement('p');cap.className='caption';cap.textContent='Um novo começo pode começar aqui';log.appendChild(cap);
+ bubble(greeting);history.forEach(m=>{if(m&&typeof m.text==='string'){if(/village\s+p[oô]r\s+do\s+sol/i.test(m.text))showVillageCard();bubble(m.text,m.role==='me');}});
 }
 async function call(payload){
  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),55000);
@@ -94,6 +106,7 @@ async function ensureSession(){if(!credentials){const d=await call({acao:'inicia
 async function send(text){
  if(busy||recording||audioBusy||requestingMic)return;
  const mensagem=(text||'').trim();if(!mensagem)return;
+ if(/village\s+p[oô]r\s+do\s+sol/i.test(mensagem))showVillageCard();
  if(mensagem.length>1500){feedback.textContent='Sua mensagem pode ter até 1.500 caracteres.';return;}
  feedback.textContent='';busy=true;syncControls();
  const requestId=lastFailure?.text===mensagem?lastFailure.requestId:crypto.randomUUID();
@@ -107,6 +120,12 @@ async function send(text){
   mine.item.remove();reply.item.remove();if(!field.value.trim())field.value=mensagem;fit();lastFailure={text:mensagem,requestId};
   feedback.textContent=e.name==='AbortError'?'O atendimento demorou. Sua mensagem foi preservada; toque em Enviar para tentar novamente.':e.message;
  }finally{busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;}
+}
+function showVillageCard(){
+ if(villageCardVisible)return;villageCardVisible=true;
+ const card=document.createElement('article');card.id='villageCard';card.className='village-card';
+ const image=document.createElement('img');image.src=VILLAGE_IMAGE;image.alt='Perspectiva ilustrativa do Village Pôr do Sol, divulgada pela Canopus';image.width=1200;image.height=675;
+ const text=document.createElement('div');text.className='card-text';const title=document.createElement('h2');title.textContent='Village Pôr do Sol';const detail=document.createElement('p');detail.textContent='Apartamentos de 2 quartos e lazer para a família, em Teresina. Conheça as condições com a Prime Lar.';const credit=document.createElement('small');credit.textContent='Perspectiva ilustrativa · Imagem divulgada pela Canopus';text.appendChild(title);text.appendChild(detail);text.appendChild(credit);card.appendChild(image);card.appendChild(text);log.appendChild(card);log.scrollTop=log.scrollHeight;
 }
 function summaryText(){
  const names={nome:'Nome',finalidade:'Interesse',tipo:'Tipo de imóvel',localizacao:'Cidade / região',bairro:'Bairro desejado',estado_civil:'Estado civil',telefone:'WhatsApp para retorno',orcamento:'Orçamento',ocupacao:'Ocupação',vinculo_publico:'Vínculo público',atividade:'Atividade',renda_bruta:'Renda bruta mensal',intencao:'Momento de decisão',necessidades:'Preferências',prazo:'Prazo',pagamento:'Forma de pagamento',empreendimento:'Empreendimento'};
@@ -176,6 +195,8 @@ field.addEventListener('input',fit);
 field.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send(field.value);}});
 document.querySelectorAll('[data-message]').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.message)));
 $('specialist').addEventListener('click',openSpecialist);
+$('help').addEventListener('click',()=>showDialog('helpDialog'));
+$('otherHelp').addEventListener('click',()=>{closeDialog('helpDialog');field.focus();feedback.textContent='Escreva sua dúvida. A Lara vai explicar e orientar o próximo passo.';});
 $('about').addEventListener('click',()=>showDialog('aboutDialog'));
 $('privacy').addEventListener('click',()=>showDialog('privacyDialog'));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeDialog(b.dataset.close)));
@@ -194,3 +215,4 @@ $('transcribe').addEventListener('click',transcribe);
 window.addEventListener('pagehide',()=>{cancelRecording=true;if(recorder?.state==='recording')recorder.stop();stream?.getTracks().forEach(t=>t.stop());if(ticker)clearInterval(ticker);if(audioUrl)URL.revokeObjectURL(audioUrl);});
 renderHistory();renderGuide();syncControls();fit();
 })();
+

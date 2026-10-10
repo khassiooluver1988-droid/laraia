@@ -5,7 +5,7 @@ const check=(s)=>checks.push(s);
 const tick=()=>new Promise(r=>setImmediate(r));
 
 async function backend(){
- let providerCalls=0,quotaCalls=0,quotaEnabled=true,providerFail=false,modelEmpty=false,modelOverride=null;
+ let providerCalls=0,quotaCalls=0,quotaEnabled=true,providerFail=false,modelEmpty=false,modelOverride=null,timeoutOnce=false;
  const sessions=[],messages=[],payloads=[];
  class Query{
   constructor(table){this.table=table;this.filters=[];this.operation='select';}
@@ -26,14 +26,25 @@ async function backend(){
    let found=matches.slice();if(this.ordering){const [k,o]=this.ordering;found.sort((a,b)=>(a[k]>b[k]?1:-1)*(o.ascending?1:-1));}if(this.maximum)found=found.slice(0,this.maximum);return {data:found,error:null};
   }
  }
- const db={from:t=>new Query(t),rpc:async()=>{quotaCalls++;return {data:quotaEnabled,error:null};}};
- const context={console,Response,Request,AbortSignal,TextEncoder,Uint8Array,crypto:webcrypto,atob,URL,setTimeout:(fn)=>{fn();return 0;},Deno:{env:{get:()=> 'fixture-key'}},withSupabase:(config,handler)=>(req)=>handler(req,{supabaseAdmin:db}),fetch:async(url,init)=>{
-  providerCalls++;const p=JSON.parse(init.body);payloads.push(p);if(providerFail)return new Response('{}',{status:503});
+ let ultimo=0;const protocols=new Map();
+ const db={from:t=>new Query(t),rpc:async(name,args)=>{
+  if(name==='lara_demo_consumir_cota'){quotaCalls++;return {data:quotaEnabled,error:null};}
+  if(name==='lara_prime_registrar_resposta'){
+   const old=messages.find(m=>m.sessao_id===args.p_sessao&&m.request_id===args.p_request&&m.papel==='model');if(old)return {data:old.resultado,error:null};
+   let codigo=protocols.get(args.p_sessao)||'';if(args.p_emitir&&!codigo){codigo='PL/2026/'+String(++ultimo).padStart(8,'0');protocols.set(args.p_sessao,codigo);}
+   const result={...args.p_resultado,protocolo:codigo};if(result.pronto_para_especialista)result.resposta+='\nProtocolo da conversa: '+codigo;
+   messages.push({sessao_id:args.p_sessao,request_id:args.p_request,papel:'user',conteudo:args.p_mensagem,ordem:messages.length+1},{sessao_id:args.p_sessao,request_id:args.p_request,papel:'model',conteudo:result.resposta,resultado:result,ordem:messages.length+2});
+   sessions.find(x=>x.id===args.p_sessao).perfil=result.perfil;return {data:result,error:null};
+  }
+  return {data:false,error:null};
+ }};
+ const context={console,Error,Response,Request,AbortSignal,TextEncoder,Uint8Array,crypto:webcrypto,atob,URL,setTimeout:(fn)=>{fn();return 0;},Deno:{env:{get:()=> 'fixture-key'}},withSupabase:(config,handler)=>(req)=>handler(req,{supabaseAdmin:db}),fetch:async(url,init)=>{
+  providerCalls++;if(timeoutOnce){timeoutOnce=false;throw Object.assign(Error("fixture timeout"),{name:"TimeoutError"});}const p=JSON.parse(init.body);payloads.push(p);if(providerFail)return new Response('{}',{status:503});
   const isAudio=p.contents[0]?.parts?.[0]?.inlineData;
   const obj=isAudio?{texto:modelEmpty?'':'Meu nome é Ana e quero alugar um apartamento.'}:(modelOverride||{resposta:'Ana, você procura alugar um apartamento em Teresina. Qual é seu orçamento mensal?',perfil:{nome:'Ana',finalidade:'alugar',tipo:'apartamento',localizacao:'Teresina',orcamento:'R$ 1.500 por mês',necessidades:'',prazo:'',pagamento:'',empreendimento:'',extra:'não deve sair'},etapa:'ocupacao',pronto_para_especialista:false});
   return Response.json({candidates:[{content:{parts:[{text:JSON.stringify(obj)}]}}]});
  }};
- vm.createContext(context);const code=stripTypeScriptTypes(fs.readFileSync('index.ts','utf8')).replace(/^import .*;$/mg,'').replace('export default ','globalThis.edge = ');vm.runInContext(code,context);
+ vm.createContext(context);const code=stripTypeScriptTypes(fs.readFileSync('edge-bundle.ts','utf8')).replace(/^import .*;$/mg,'').replace('export default ','globalThis.edge = ');vm.runInContext(code,context);
  const call=async(data,origin)=>{const req=new Request('https://fixture.local',{method:'POST',headers:{'Content-Type':'application/json',...(origin?{Origin:origin}:{})},body:JSON.stringify(data)});const r=await context.edge.fetch(req);return {status:r.status,data:await r.json(),headers:r.headers};};
  const status=await context.edge.fetch(new Request('https://fixture.local'));assert.equal((await status.json()).marca,'Prime Lar Imobiliária');
  assert.equal((await call({},'https://unknown.example')).status,403);
@@ -49,8 +60,9 @@ async function backend(){
  await call({...cred,mensagem:'Preciso de dois quartos',request_id:webcrypto.randomUUID()});const last=payloads.at(-1);assert.deepEqual(last.contents.map(m=>m.role),['user','model','user']);assert.ok(last.systemInstruction.parts[0].text.includes('R$ 1.500 por mês'));
  check('Servidor: ordem das mensagens e perfil anterior preservam o contexto.');
  quotaEnabled=false;assert.equal((await call({...cred,mensagem:'mais uma',request_id:webcrypto.randomUUID()})).status,429);quotaEnabled=true;
- const msgBefore=messages.length;providerFail=true;assert.equal((await call({...cred,mensagem:'teste de falha',request_id:webcrypto.randomUUID()})).status,502);assert.equal(messages.length,msgBefore);providerFail=false;
+ let msgBefore=messages.length;providerFail=true;assert.equal((await call({...cred,mensagem:'teste de falha',request_id:webcrypto.randomUUID()})).status,502);assert.equal(messages.length,msgBefore);providerFail=false;
  check('Servidor: cota e falha do provedor retornam erro sem histórico parcial.');
+ timeoutOnce=true;const retriesBefore=providerCalls;const recovered=await call({...cred,mensagem:'Teste de recuperação',request_id:webcrypto.randomUUID()});assert.equal(recovered.status,200);assert.equal(providerCalls,retriesBefore+2);check('Servidor: timeout temporário faz uma segunda tentativa e registra a resposta recuperada.');msgBefore=messages.length;
  const wav=Buffer.alloc(16044);wav.write('RIFF',0);wav.write('WAVE',8);const audio=wav.toString('base64');
  const t=await call({...cred,acao:'transcrever',audio,mime_type:'audio/wav'});assert.equal(t.status,200);assert.ok(t.data.texto.includes('Ana'));assert.equal(messages.length,msgBefore);assert.equal(payloads.at(-1).contents[0].parts[0].inlineData.mimeType,'audio/wav');
  modelEmpty=true;assert.equal((await call({...cred,acao:'transcrever',audio,mime_type:'audio/wav'})).status,422);
@@ -72,20 +84,27 @@ async function backend(){
  modelOverride={resposta:'Atendimento concluído',perfil:base,etapa:'concluido',pronto_para_especialista:true,protocolo:'FAKE'};
  const premature=await call({...cred,mensagem:'Sim',request_id:webcrypto.randomUUID()});assert.equal(premature.data.protocolo,'');assert.equal(premature.data.etapa,'revisao');assert.equal(premature.data.perfil.concordancia_resumo,'pendente');
  check('Servidor: confirmação inventada pelo modelo não gera protocolo nem encerra a revisão.');
- const closeId=webcrypto.randomUUID();const closed=await call({...cred,mensagem:'Confirmo o resumo; pode gerar meu protocolo',request_id:closeId});assert.equal(closed.status,200);assert.match(closed.data.protocolo,/^PL-20261009-[A-F0-9]{32}$/);assert.ok(closed.data.resposta.includes(closed.data.protocolo));assert.equal(closed.data.pronto_para_especialista,true);assert.equal(closed.data.perfil.renda_bruta,'R$ 5.000 por mês');
+ const closeId=webcrypto.randomUUID();const closed=await call({...cred,mensagem:'Confirmo o resumo; pode gerar meu protocolo',request_id:closeId});assert.equal(closed.status,200);assert.equal(closed.data.protocolo,'PL/2026/00000001');assert.ok(closed.data.resposta.includes(closed.data.protocolo));assert.equal(closed.data.pronto_para_especialista,true);assert.equal(closed.data.perfil.renda_bruta,'R$ 5.000 por mês');
  const repeated=await call({...cred,mensagem:'Confirmo',request_id:closeId});assert.equal(repeated.data.protocolo,closed.data.protocolo);
  modelOverride={resposta:'Posso esclarecer suas dúvidas.',perfil:base,etapa:'livre',pronto_para_especialista:false};const later=await call({...cred,mensagem:'Como funciona uma visita?',request_id:webcrypto.randomUUID()});assert.equal(later.data.protocolo,closed.data.protocolo);
- check('Servidor: protocolo usa a sessão e a data de Brasília, fica no histórico e permanece em reenvios e continuidade.');
+ check('Servidor: protocolo sequencial por ano de Brasília, fica no histórico e permanece em reenvios e continuidade.');
  const another=await call({acao:'iniciar'});modelOverride={resposta:'Vamos continuar com o especialista.',perfil:{nome:'Bia'},etapa:'concluido',pronto_para_especialista:true};
- const human=await call({sessao:another.data.sessao,token:another.data.token,mensagem:'Quero falar com um corretor especialista',request_id:webcrypto.randomUUID()});assert.match(human.data.protocolo,/^PL-/);assert.notEqual(human.data.protocolo,closed.data.protocolo);assert.equal(human.data.perfil.renda_bruta,'');
+ const human=await call({sessao:another.data.sessao,token:another.data.token,mensagem:'Quero falar com um corretor especialista',request_id:webcrypto.randomUUID()});assert.equal(human.data.protocolo,'PL/2026/00000002');assert.notEqual(human.data.protocolo,closed.data.protocolo);assert.equal(human.data.perfil.renda_bruta,'');
  check('Servidor: pedido direto de humano permite protocolo sem exigir renda ou cadastro completo.');
 
+ const fastBefore=providerCalls,fastQuota=quotaCalls;
+ modelOverride=null;const faq=await call({...cred,mensagem:'Como funciona a compra de um imóvel por financiamento?',request_id:webcrypto.randomUUID()});
+ assert.equal(faq.status,200);assert.equal(providerCalls,fastBefore);assert.equal(quotaCalls,fastQuota);assert.ok(faq.data.resposta.includes('simulação'));assert.ok(!faq.data.resposta.includes('Como posso chamar'));assert.equal(faq.data.protocolo,closed.data.protocolo);
+ check('Servidor: dúvida frequente explica financiamento, mantém contexto e protocolo sem esperar nova geração.');
+ const actualHtml=fs.readFileSync('fixtures/village_canopus_20261009.html','utf8');context.fixtureHtml=actualHtml;
+ const facts=vm.runInContext('extrairFatosVillage(fixtureHtml)',context);assert.equal(facts.quartos,2);assert.equal(facts.status,'Em obras');assert.ok(facts.lazer.includes('pet place'));assert.equal(facts.preco,undefined);assert.equal(facts.endereco,undefined);assert.throws(()=>vm.runInContext('extrairFatosVillage("pagina errada")',context));
+ check('Servidor: fonte oficial extrai somente fatos permitidos e rejeita páginas inválidas ou campos comerciais conflitantes.');
 }
 
 async function frontend(){
  class Element{
   constructor(id){this.id=id;this.events={};this.children=[];this.value='';this.textContent='';this.style={};this.hidden=false;this.disabled=false;this.dataset={};this.className='';this.scrollHeight=24;this.classList={add:(c)=>{this.className+=' '+c;},remove:(c)=>{this.className=this.className.replace(c,'');}};}
-  addEventListener(n,f){(this.events[n]??=[]).push(f);} dispatch(n,event={}){for(const fn of this.events[n]??[])fn({preventDefault(){},...event});}
+  addEventListener(n,f){(this.events[n]??=[]).push(f);} dispatch(n,event={}){if(n==='click'&&this.disabled)return;for(const fn of this.events[n]??[])fn({preventDefault(){},...event});}
   appendChild(c){c.parent=this;this.children.push(c);return c;} replaceChildren(){this.children=[];} remove(){if(this.parent)this.parent.children=this.parent.children.filter(v=>v!==this);}
   focus(){this.focused=true;} select(){this.selected=true;} setAttribute(k,v){this[k]=v;} removeAttribute(k){delete this[k];} showModal(){this.open=true;} close(){this.open=false;}
  }
@@ -111,14 +130,16 @@ async function frontend(){
  assert.ok(nodes.messages.children[1].children.at(-1).textContent.includes('Prime Lar'));shortcuts[1].dispatch('click');await tick();await tick();
  assert.equal(calls.at(-1).mensagem,'Quero alugar um imóvel');assert.equal(nodes.send.disabled,false);
  check('Interface: abertura da Prime Lar, botão Alugar, envio e desbloqueio após resposta.');
- nodes.message.value='Mensagem em rascunho';const n=calls.length;shortcuts[3].dispatch('click');await tick();assert.equal(calls.length,n);assert.ok(nodes.message.value.includes('casa'));
- check('Interface: atalhos preservam o rascunho existente e exigem revisão.');
+ nodes.message.value='Mensagem em rascunho';const n=calls.length;shortcuts[3].dispatch('click');await tick();assert.equal(calls.length,n);assert.equal(nodes.message.value,'Mensagem em rascunho');assert.ok(shortcuts.slice(0,4).every(x=>x.disabled));shortcuts[5].dispatch('click');await tick();assert.ok(nodes.message.value.includes('financiamento'));
+ check('Interface: compra/aluguel e casa/apartamento bloqueados após confirmação; dúvida preserva o rascunho.');
+ nodes.help.dispatch('click');assert.equal(nodes.helpDialog.open,true);nodes.otherHelp.dispatch('click');assert.equal(nodes.helpDialog.open,false);assert.equal(nodes.message.focused,true);check('Interface: Tenho dúvidas abre as opções e Outra dúvida volta ao campo de mensagem.');
  nodes.message.value='Meu orçamento mensal é R$ 1500';fail=true;nodes.form.dispatch('submit');await tick();await tick();assert.equal(nodes.message.value,'Meu orçamento mensal é R$ 1500');const failedRequest=calls.at(-1).request_id;
  fail=false;nodes.form.dispatch('submit');await tick();await tick();assert.equal(calls.at(-1).request_id,failedRequest);
  check('Interface: falha preserva a mensagem e usa o mesmo identificador no reenvio.');
  nodes.specialist.dispatch('click');assert.ok(nodes.specialistDialog.open);assert.ok(nodes.summary.value.includes('alugar'));nodes.copySummary.dispatch('click');await tick();assert.ok(nodes.copyStatus.textContent.includes('copiado'));
  check('Interface: resumo revisável, cópia e canal manual para especialista.');
  nodes.microphone.dispatch('click');assert.equal(nodes.audioBox.hidden,false);nodes.startRecord.dispatch('click');await tick();assert.equal(mediaRecorders[0].state,'recording');assert.equal(nodes.send.disabled,true);
+ await new Promise(r=>setTimeout(r,1100));assert.equal(nodes.recordTime.textContent,'00:01 / 01:00');check('Interface: contador avança enquanto o áudio ainda está sendo gravado.');
  nodes.stopRecord.dispatch('click');await tick();assert.equal(tracksStopped,1);assert.equal(nodes.audioPreview.hidden,false);
  const chatCount=calls.filter(c=>c.acao==='chat').length;nodes.transcribe.dispatch('click');await tick();await tick();assert.ok(nodes.message.value.includes('alugar um apartamento'));assert.equal(calls.filter(c=>c.acao==='chat').length,chatCount);assert.equal(nodes.audioBox.hidden,true);
  const wav=Buffer.from(calls.at(-1).audio,'base64');assert.equal(wav.subarray(0,4).toString(),'RIFF');assert.equal(wav.readUInt32LE(24),16000);assert.equal(wav.readUInt16LE(22),1);
@@ -152,13 +173,14 @@ async function frontend(){
  check('Prévia: MEI informa atividade e esclarece faturamento antes de registrar renda pessoal, sem pressionar quem pesquisa.');
  reset();await say('Quero falar com um corretor especialista');assert.ok(!nodes.protocolBox.hidden);assert.ok(lastReply().includes('envie no Instagram'));assert.equal(calls.length,beforePreviewCalls);
  check('Prévia: contato humano interrompe a triagem e toda a demonstração funciona sem enviar mensagens ao servidor.');
- reset();shortcuts[4].dispatch('click');await tick();await tick();assert.ok(lastReply().includes('grande novidade em Teresina'));assert.ok(lastReply().includes('2 quartos'));assert.ok(lastReply().includes('piscina'));assert.ok(!lastReply().includes('material divulgado'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Falar com especialista'));
+ reset();assert.ok(shortcuts.slice(0,4).every(x=>!x.disabled));shortcuts[4].dispatch('click');assert.ok(nodes.messages.children.some(x=>x.id==='villageCard'));check('Interface: nova conversa libera as escolhas e Village exibe a imagem antes da resposta.');await tick();await tick();assert.ok(lastReply().includes('grande novidade em Teresina'));assert.ok(lastReply().includes('2 quartos'));assert.ok(lastReply().includes('piscina'));assert.ok(!lastReply().includes('material divulgado'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Falar com especialista'));
  await select('Continuar com a Lara');assert.ok(lastReply().includes('Como posso chamar'));await say('Bia');await select('Comprar');await select('Apartamento');assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Altos'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Demerval Lobão'));assert.ok(nodes.guideOptions.children.some(x=>x.textContent==='Timon'));await select('Timon');await select('Sem preferência de bairro');await select('Preciso de orientação');await say('Tenho pressa');assert.ok(lastReply().includes('especialista'));await select('Falar com especialista');assert.ok(!nodes.protocolBox.hidden);nodes.specialist.dispatch('click');assert.ok(nodes.summary.value.includes('Timon'));assert.ok(nodes.summary.value.includes('Village Pôr do Sol'));assert.ok(!nodes.summary.value.includes('Renda bruta mensal'));assert.equal(calls.length,beforePreviewCalls);
  check('Prévia: Village apresenta benefícios e campanha, regiões ampliadas e contato direto sem exigir renda.');
- const built=fs.readFileSync(fs.existsSync('../index.html')?'../index.html':'index.html','utf8');assert.ok(built.includes('id="laraPhoto"'));assert.ok(built.includes('href="assets/lara-prime-lar.webp"'));assert.ok(built.includes('href="assets/prime-lar-logo.jpg"'));assert.ok(built.includes('class="brand-panel"'));assert.ok(built.includes('viewBox="420 240 700 700"'));assert.ok(built.includes('campaign-badge'));assert.ok(built.includes('Novidade'));assert.ok(!built.includes('__LARA_IMAGE__'));
- const standalone=fs.readFileSync('LARA_PRIME_LAR_PREVIA.html','utf8');assert.ok(standalone.includes('data:image/webp;base64,'));assert.ok(standalone.includes('data:image/jpeg;base64,'));assert.ok(standalone.includes('data:image/jpeg;base64,'));assert.ok(!standalone.includes('Mensagens processadas por IA e registradas'));assert.ok(!/\bfetch\(/.test(standalone));
+ const built=fs.readFileSync(fs.existsSync('../index.html')?'../index.html':'index.html','utf8');assert.ok(built.includes('id="laraPhoto"'));assert.ok(built.includes('href="assets/lara-prime-lar.webp"'));assert.ok(built.includes('href="assets/prime-lar-logo.jpg"'));assert.ok(built.includes('class="brand-panel"'));assert.ok(built.includes('viewBox="420 240 700 700"'));assert.ok(built.includes('campaign-badge'));assert.ok(built.includes('Lançamento'));assert.ok(!built.includes('__LARA_IMAGE__'));
+ const standalone=fs.readFileSync('LARA_PRIME_LAR_PREVIA.html','utf8');assert.ok(standalone.includes('data:image/webp;base64,'));assert.ok(standalone.includes('data:image/jpeg;base64,'));assert.ok(!standalone.includes('Mensagens processadas por IA e registradas'));assert.ok(!/\bfetch\(/.test(standalone));
  check('Interface: nova imagem digital da Lara e marca Prime Lar incorporadas, perfil enquadrado e destaque de campanha; prévia sem dependência das imagens externas.');
 
 
 }
 (async()=>{await backend();await frontend();fs.writeFileSync('validacao_local.json',JSON.stringify({status:'aprovado_localmente',checks,limite:'Mocks locais; sem teste de produção, microfone físico, renderização em navegador ou resposta real do Gemini.'},null,2));for(const c of checks)console.log('OK:',c);console.log('Total:',checks.length);})().catch(e=>{console.error(e);process.exitCode=1;});
+
