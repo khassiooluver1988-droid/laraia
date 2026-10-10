@@ -14,7 +14,7 @@ function save(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify({sessao:cr
 function saveCredentials(data){if(data.sessao&&data.token){credentials={sessao:data.sessao,token:data.token};try{localStorage.setItem(SESSION_KEY,JSON.stringify(credentials));}catch{}}}
 function bubble(text,mine=false,loading=false){
  const item=document.createElement('div');item.className='msg '+(mine?'me':'assistant');
- if(!mine){const portrait=document.createElementNS('http://www.w3.org/2000/svg','svg');portrait.setAttribute('class','mini');portrait.setAttribute('viewBox','0 0 360 360');portrait.setAttribute('aria-hidden','true');const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href','#laraPhoto');portrait.appendChild(use);item.appendChild(portrait);}
+ if(!mine){const portrait=document.createElementNS('http://www.w3.org/2000/svg','svg');portrait.setAttribute('class','mini');portrait.setAttribute('viewBox','420 240 700 700');portrait.setAttribute('aria-hidden','true');const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href','#laraPhoto');portrait.appendChild(use);item.appendChild(portrait);}
  const body=document.createElement('div');body.className='bubble'+(loading?' loading':'');body.textContent=text;item.appendChild(body);log.appendChild(item);log.scrollTop=log.scrollHeight;return {item,body};
 }
 function fit(){field.style.height='24px';field.style.height=Math.min(field.scrollHeight,112)+'px';}

@@ -1,9 +1,9 @@
 const fs=require('node:fs');
 const html=fs.readFileSync('template.html','utf8'),app=fs.readFileSync('app.js','utf8');
-const target=fs.existsSync('../index.html')?'../index.html':'index.html';
+const target='../index.html';
 const assetDir=target.startsWith('../')?'../assets':'assets';
 const dataUri=(name,mime)=>'data:'+mime+';base64,'+fs.readFileSync(assetDir+'/'+name).toString('base64');
-const build=(script,local=false)=>html.replace('__LARA_IMAGE__',()=>fs.readFileSync('legacy-avatar.txt','utf8').trim()).replace('__LOGO_IMAGE__',()=>local?dataUri('prime-lar-logo.jpg','image/jpeg'):'assets/prime-lar-logo.jpg').replace('__APP_SCRIPT__',()=>script);
+const build=(script,local=false)=>html.replace('__LARA_IMAGE__',()=>local?dataUri('lara-prime-lar.webp','image/webp'):'assets/lara-prime-lar.webp').replace('__LOGO_IMAGE__',()=>local?dataUri('prime-lar-logo.jpg','image/jpeg'):'assets/prime-lar-logo.jpg').replace('__APP_SCRIPT__',()=>script);
 fs.writeFileSync(target,build(app));
 const prompt=fs.readFileSync('PROMPT_LARA_PRIME_LAR.txt','utf8');
 const edge=fs.readFileSync('index.ts','utf8').replace(/^const INSTRUCOES = .*;$/m,()=> 'const INSTRUCOES = '+JSON.stringify(prompt)+';');

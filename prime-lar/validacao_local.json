@@ -27,7 +27,7 @@
     "Prévia: MEI informa atividade e esclarece faturamento antes de registrar renda pessoal, sem pressionar quem pesquisa.",
     "Prévia: contato humano interrompe a triagem e toda a demonstração funciona sem enviar mensagens ao servidor.",
     "Prévia: Village apresenta benefícios e campanha, regiões ampliadas e contato direto sem exigir renda.",
-    "Interface: imagem antiga da Lara e marca Prime Lar incorporadas, perfil enquadrado e destaque de campanha; prévia sem dependência das imagens externas."
+    "Interface: nova imagem digital da Lara e marca Prime Lar incorporadas, perfil enquadrado e destaque de campanha; prévia sem dependência das imagens externas."
   ],
   "limite": "Mocks locais; sem teste de produção, microfone físico, renderização em navegador ou resposta real do Gemini."
 }

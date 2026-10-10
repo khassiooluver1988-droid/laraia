@@ -1,0 +1,11 @@
+{
+  "status": "gemini_e_persistencia_confirmados",
+  "funcao": "lara-chat",
+  "versao_funcao": 9,
+  "contrato_api": "prime-lar-2.3",
+  "revisao_visual": "2.4",
+  "teste": "Dados fictícios para validação de publicação",
+  "resposta": "Olá, Teste de Publicação! É um prazer ajudar você. Para que eu possa orientar melhor sua busca por uma casa para alugar em Teresina, você tem preferência por algum bairro específico ou região da cidade?",
+  "mensagens_registradas": 2,
+  "limite": "O teste confirmou mensagem escrita, resposta real do Gemini e persistência. Microfone físico e transcrição com fala real ainda não foram testados; a renderização visual em navegador não foi concluída nesta sessão."
+}
