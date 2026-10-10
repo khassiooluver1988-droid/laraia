@@ -66,6 +66,9 @@ function optionsFor(stage,p){
  case 'vinculo_publico':return [pick('Municipal','Meu vínculo é municipal'),pick('Estadual','Meu vínculo é estadual'),pick('Federal','Meu vínculo é federal'),pick('Outro vínculo'),pick('Prefiro não informar')];
  case 'atividade':return [pick('Prefiro não informar')];
  case 'renda':return [pick('Até R$ 2 mil/mês','Minha renda bruta mensal é até R$ 2 mil'),pick('R$ 2 a 4 mil/mês','Minha renda bruta mensal é de R$ 2 a 4 mil'),pick('R$ 4 a 7 mil/mês','Minha renda bruta mensal é de R$ 4 a 7 mil'),pick('Acima de R$ 7 mil/mês','Minha renda bruta mensal é acima de R$ 7 mil'),pick('Prefiro não informar')];
+ case 'village_menu':return [pick('Localização','Quero conhecer a localização do Village Pôr do Sol'),pick('Planta','Quero conhecer a planta do Village Pôr do Sol'),pick('Piscinas','Quero conhecer as piscinas do Village Pôr do Sol'),pick('Pet Place','Quero conhecer o Pet Place do Village Pôr do Sol'),pick('Oportunidade Prime Lar','Quero conhecer a oportunidade da Prime Lar para sair do aluguel')];
+ case 'village_convite':return [pick('Sim, agarraria!','Sim, eu agarraria essa oportunidade!'),pick('Quero entender','Quero entender como funciona a oportunidade'),pick('Agora não','Agora não tenho interesse')];
+ case 'village_nota':return Array.from({length:10},(_,i)=>pick(String(i+1)));
  case 'intencao':return [pick('Sim, se fizer sentido','Sim, se as condições fizerem sentido para mim'),pick('Quero avaliar'),pick('Ainda estou pesquisando')];
  case 'revisao':return [pick('Confirmar e gerar protocolo','Confirmo o resumo; pode gerar meu protocolo'),pick('Quero corrigir')];
  default:return [];
@@ -128,7 +131,7 @@ function showVillageCard(){
  const text=document.createElement('div');text.className='card-text';const title=document.createElement('h2');title.textContent='Village Pôr do Sol';const detail=document.createElement('p');detail.textContent='Apartamentos de 2 quartos e lazer para a família, em Teresina. Conheça as condições com a Prime Lar.';const credit=document.createElement('small');credit.textContent='Perspectiva ilustrativa · Imagem divulgada pela Canopus';text.appendChild(title);text.appendChild(detail);text.appendChild(credit);card.appendChild(image);card.appendChild(text);log.appendChild(card);log.scrollTop=log.scrollHeight;
 }
 function summaryText(){
- const names={nome:'Nome',finalidade:'Interesse',tipo:'Tipo de imóvel',localizacao:'Cidade / região',bairro:'Bairro desejado',estado_civil:'Estado civil',telefone:'WhatsApp para retorno',orcamento:'Orçamento',ocupacao:'Ocupação',vinculo_publico:'Vínculo público',atividade:'Atividade',renda_bruta:'Renda bruta mensal',intencao:'Momento de decisão',necessidades:'Preferências',prazo:'Prazo',pagamento:'Forma de pagamento',empreendimento:'Empreendimento'};
+ const names={nome:'Nome',finalidade:'Interesse',tipo:'Tipo de imóvel',localizacao:'Cidade / região',bairro:'Bairro desejado',estado_civil:'Estado civil',telefone:'WhatsApp para retorno',orcamento:'Orçamento',ocupacao:'Ocupação',vinculo_publico:'Vínculo público',atividade:'Atividade',renda_bruta:'Renda bruta mensal',intencao:'Momento de decisão',nivel_desejo:'Desejo de conquistar imóvel (1 a 10)',necessidades:'Preferências',prazo:'Prazo',pagamento:'Forma de pagamento',empreendimento:'Empreendimento'};
  const entries=Object.entries(names).filter(([k])=>typeof perfil[k]==='string'&&perfil[k].trim()).map(([k,label])=>label+': '+perfil[k].trim());
  return 'Olá, equipe Prime Lar! Conversei com a Lara e gostaria de continuar com um corretor especialista.\n'+(protocolo?'Protocolo da conversa: '+protocolo+'\n':'')+'\n'+(entries.length?entries.join('\n'):'Meu interesse: [descreva o imóvel que procura]');
 }
