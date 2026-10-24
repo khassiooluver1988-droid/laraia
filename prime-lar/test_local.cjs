@@ -127,12 +127,12 @@ async function frontend(){
   return Response.json({resposta:'Qual é sua ocupação?',etapa:'ocupacao',versao:'prime-lar-2.3',perfil:{finalidade:'alugar',tipo:'apartamento'}});
  }};
  vm.createContext(context);vm.runInContext(fs.readFileSync('app.js','utf8'),context);
- assert.ok(nodes.messages.children[1].children.at(-1).textContent.includes('Prime Lar'));shortcuts[1].dispatch('click');await tick();await tick();
+ assert.ok(nodes.messages.children[1].children.at(-1).textContent.includes('Prime Lar'));nodes.openMenu.dispatch('click');assert.equal(nodes.navDialog.open,true);assert.equal(nodes.openMenu['aria-expanded'],'true');shortcuts[1].dispatch('click');assert.equal(nodes.navDialog.open,false);assert.equal(nodes.openMenu['aria-expanded'],'false');check('Interface: menu superior abre, fecha e recolhe antes de continuar o atendimento.');await tick();await tick();
  assert.equal(calls.at(-1).mensagem,'Quero alugar um imóvel');assert.equal(nodes.send.disabled,false);
  check('Interface: abertura da Prime Lar, botão Alugar, envio e desbloqueio após resposta.');
  nodes.message.value='Mensagem em rascunho';const n=calls.length;shortcuts[3].dispatch('click');await tick();assert.equal(calls.length,n);assert.equal(nodes.message.value,'Mensagem em rascunho');assert.ok(shortcuts.slice(0,4).every(x=>x.disabled));shortcuts[5].dispatch('click');await tick();assert.ok(nodes.message.value.includes('financiamento'));
  check('Interface: compra/aluguel e casa/apartamento bloqueados após confirmação; dúvida preserva o rascunho.');
- nodes.help.dispatch('click');assert.equal(nodes.helpDialog.open,true);nodes.otherHelp.dispatch('click');assert.equal(nodes.helpDialog.open,false);assert.equal(nodes.message.focused,true);check('Interface: Tenho dúvidas abre as opções e Outra dúvida volta ao campo de mensagem.');
+ nodes.openMenu.dispatch('click');nodes.help.dispatch('click');assert.equal(nodes.navDialog.open,false);assert.equal(nodes.helpDialog.open,true);nodes.otherHelp.dispatch('click');assert.equal(nodes.helpDialog.open,false);assert.equal(nodes.message.focused,true);check('Interface: Tenho dúvidas abre as opções e Outra dúvida volta ao campo de mensagem.');
  nodes.message.value='Meu orçamento mensal é R$ 1500';fail=true;nodes.form.dispatch('submit');await tick();await tick();assert.equal(nodes.message.value,'Meu orçamento mensal é R$ 1500');const failedRequest=calls.at(-1).request_id;
  fail=false;nodes.form.dispatch('submit');await tick();await tick();assert.equal(calls.at(-1).request_id,failedRequest);
  check('Interface: falha preserva a mensagem e usa o mesmo identificador no reenvio.');

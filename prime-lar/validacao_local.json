@@ -15,6 +15,7 @@
     "Servidor: pedido direto de humano permite protocolo sem exigir renda ou cadastro completo.",
     "Servidor: dúvida frequente explica financiamento, mantém contexto e protocolo sem esperar nova geração.",
     "Servidor: fonte oficial extrai somente fatos permitidos e rejeita páginas inválidas ou campos comerciais conflitantes.",
+    "Interface: menu superior abre, fecha e recolhe antes de continuar o atendimento.",
     "Interface: abertura da Prime Lar, botão Alugar, envio e desbloqueio após resposta.",
     "Interface: compra/aluguel e casa/apartamento bloqueados após confirmação; dúvida preserva o rascunho.",
     "Interface: Tenho dúvidas abre as opções e Outra dúvida volta ao campo de mensagem.",

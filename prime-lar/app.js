@@ -77,6 +77,7 @@ function optionsFor(stage,p){
 function choose(value){
  if(busy||recording||audioBusy||requestingMic)return;
  if(selectedShortcut(value).locked)return;
+ closeDialog('navDialog');
  closeDialog('helpDialog');
  if(field.value.trim()){field.value=[field.value.trim(),value].join('\n').slice(0,1500);fit();field.focus();feedback.textContent='A opção foi incluída no seu rascunho. Revise antes de enviar.';}else send(value);
 }
@@ -88,8 +89,8 @@ function renderGuide(){
  $('protocolBox').hidden=!valid;$('protocolValue').textContent=valid?protocolo:'';syncControls();
  $('protocolSubject').textContent=valid?[perfil.finalidade==='comprar'?'Compra':perfil.finalidade==='alugar'?'Aluguel':'Orientação',perfil.tipo,perfil.localizacao].filter(Boolean).join(' · '):'';
 }
-function showDialog(id){const d=$(id);if(typeof d.showModal==='function')d.showModal();else{d.setAttribute('open','');d.hidden=false;}}
-function closeDialog(id){const d=$(id);if(typeof d.close==='function')d.close();else d.removeAttribute('open');}
+function showDialog(id){if(id!=='navDialog')closeDialog('navDialog');else $('openMenu').setAttribute('aria-expanded','true');const d=$(id);if(typeof d.showModal==='function')d.showModal();else{d.setAttribute('open','');d.hidden=false;}}
+function closeDialog(id){const d=$(id);if(typeof d.close==='function')d.close();else d.removeAttribute('open');if(id==='navDialog')$('openMenu').setAttribute('aria-expanded','false');}
 function renderHistory(){
  villageCardVisible=false;log.replaceChildren();const cap=document.createElement('p');cap.className='caption';cap.textContent='Um novo começo pode começar aqui';log.appendChild(cap);
  bubble(greeting);history.forEach(m=>{if(m&&typeof m.text==='string'){if(/village\s+p[oô]r\s+do\s+sol/i.test(m.text))showVillageCard();bubble(m.text,m.role==='me');}});
@@ -198,6 +199,8 @@ field.addEventListener('input',fit);
 field.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send(field.value);}});
 document.querySelectorAll('[data-message]').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.message)));
 $('specialist').addEventListener('click',openSpecialist);
+$('openMenu').addEventListener('click',()=>showDialog('navDialog'));
+$('navDialog').addEventListener('close',()=>$('openMenu').setAttribute('aria-expanded','false'));
 $('help').addEventListener('click',()=>showDialog('helpDialog'));
 $('otherHelp').addEventListener('click',()=>{closeDialog('helpDialog');field.focus();feedback.textContent='Escreva sua dúvida. A Lara vai explicar e orientar o próximo passo.';});
 $('about').addEventListener('click',()=>showDialog('aboutDialog'));

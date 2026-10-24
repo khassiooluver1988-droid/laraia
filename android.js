@@ -8,11 +8,13 @@
  const confirm = document.getElementById('confirmInstall');
  const status = document.getElementById('installStatus');
  const button = document.createElement('button');
- button.className = 'icon-btn install-button';
+ button.className = 'menu-action install-button';
  button.type = 'button';button.id = 'installLara';
  button.setAttribute('aria-label', 'Instalar Lara no celular');
  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"/></svg><span>Instalar</span>';
- document.querySelector('.header-tools').prepend(button);
+ const menuActions = document.getElementById('appMenuActions');
+ const closeNavigation = () => {const menu = document.getElementById('navDialog');if (menu?.open) menu.close();};
+ menuActions.append(button);
  button.hidden = standalone();
  let installEvent = null, registration = null, installing = false;
  window.addEventListener('beforeinstallprompt', event => {
@@ -28,7 +30,7 @@
   if (standalone()) return;
   confirm.hidden = !installEvent;
   if (!installEvent) status.textContent = 'Se o navegador não oferecer a instalação, siga o passo a passo abaixo.';
-  panel.showModal();
+  closeNavigation();panel.showModal();
  });
  document.getElementById('closeInstall').addEventListener('click', () => panel.close());
  confirm.addEventListener('click', async () => {
@@ -54,11 +56,11 @@
  const checkUpdate = document.getElementById('checkUpdate');
  const applyUpdate = document.getElementById('applyUpdate');
  const actions = document.createElement('div');actions.className = 'pwa-actions';
- const updateButton = document.createElement('button');updateButton.type = 'button';updateButton.id = 'updateLara';updateButton.className = 'update-lara';
+ const updateButton = document.createElement('button');updateButton.type = 'button';updateButton.id = 'updateLara';updateButton.className = 'menu-action update-lara';
  updateButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5M19 12a7 7 0 1 0-2 5"/></svg><span>Atualizar Lara</span>';
- actions.append(updateButton);document.querySelector('.bottom').insertBefore(actions,document.querySelector('.info'));
+ actions.append(updateButton);menuActions.append(actions);
  document.getElementById('closeUpdate').addEventListener('click', () => updatePanel.close());
- updateButton.addEventListener('click', () => {updatePanel.showModal();void findUpdate();});
+ updateButton.addEventListener('click', () => {closeNavigation();updatePanel.showModal();void findUpdate();});
  checkUpdate.addEventListener('click', () => {void findUpdate();});
  let registrationPromise = Promise.resolve(null);
  const supported = 'serviceWorker' in navigator && window.isSecureContext;

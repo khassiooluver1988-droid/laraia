@@ -1,0 +1,25 @@
+PROTOCOLO DE SERVIÇO — LARA PRIME LAR
+Código: LARA-ANDROID-20261024-003
+Data/hora de Brasília: 24/10/2026 02:00:14
+Projeto: Lara — Prime Lar Imobiliária
+Tipo: Reorganização da navegação em menu superior direito.
+Referência anterior confirmada: LARA-ANDROID-20261024-002, commit 233f6a3cd96087f8167bcfcf88c6e7aa161ba2b0.
+Sequência: 003 na série Android deste projeto; a sequência geral de outros serviços não foi verificada.
+
+Descrição: Comprar, Alugar, Apartamento, Casa, Lançamento Village Pôr do Sol, Tenho dúvidas e Falar com especialista passam para um painel recolhido, acessível pelo botão Menu no canto superior direito. Instalar, Atualizar Lara, Nova conversa e informações ficam no mesmo menu. Retirados os atalhos fixos e os textos informativos da área inferior, que mantém mensagem, microfone e envio. Respostas rápidas de cada etapa e avisos temporários continuam disponíveis quando necessários.
+Justificativa: liberar espaço para a conversa e simplificar o envio no celular.
+
+Checklist:
+[OK] 34 verificações existentes e de navegação aprovadas.
+[OK] 10 verificações Android/PWA aprovadas.
+[OK] 3 verificações do fluxo de publicação aprovadas.
+[OK] IDs sem duplicação e menu principal único.
+[OK] Menu abre e fecha; escolher uma opção recolhe o menu antes do próximo diálogo ou atendimento.
+[OK] Tenho dúvidas conferido no navegador sem sobreposição de painéis.
+[OK] Layout inicial e menu conferidos em janela com 390 pixels de largura.
+[OK] Mantidos o retrato, a logomarca, o atendimento e a geração automática de versão.
+[OK] Sem mudanças no banco ou na função de atendimento.
+[LIMITE] Conferência de largura no navegador; não substitui aparelho Android físico.
+
+Status: implementação e verificações locais concluídas. Publicação acompanha o workflow do commit correspondente.
+Acesso: https://khassiooluver1988-droid.github.io/laraia/

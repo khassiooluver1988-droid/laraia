@@ -4,7 +4,7 @@ Aplicativo web instalável (PWA) sobre a interface atual da Lara. A instalação
 
 ## Atualizar Lara
 
-O botão **Atualizar Lara**, sempre disponível abaixo da caixa de mensagem, abre a verificação de novas versões. Com internet, ele consulta a publicação e informa se há uma atualização pronta. Toque em **Atualizar agora** para aplicar. Rascunho, áudio aberto ou resposta em andamento impedem a recarga até terminar essa etapa.
+A opção **Atualizar Lara**, disponível no **Menu** do canto superior direito, abre a verificação de novas versões. Com internet, ele consulta a publicação e informa se há uma atualização pronta. Toque em **Atualizar agora** para aplicar. Rascunho, áudio aberto ou resposta em andamento impedem a recarga até terminar essa etapa.
 
 Ao salvar alterações na branch `main`, o GitHub Actions gera automaticamente o aplicativo e a nova revisão do cache antes de publicar. Se a alteração foi feita diretamente no `index.html`, ela é preservada. Alterações nas fontes `prime-lar/template.html`, `prime-lar/app.js` ou `prime-lar/build_local.cjs` recompilam a interface a partir dessas fontes. Se o mesmo conjunto de commits alterar fontes e `index.html`, as fontes são a versão canônica.
 
@@ -12,7 +12,7 @@ As mudanças só ficam disponíveis após sucesso do workflow de publicação. A
 
 ## Instalar e compartilhar
 
-Compartilhe https://khassiooluver1988-droid.github.io/laraia/ com o cliente. Abra no Chrome do Android, toque em **Instalar** no cabeçalho e confirme. Se o navegador ainda não oferecer o botão de confirmação, abra o menu ⋮ e escolha **Instalar aplicativo** ou **Adicionar à tela inicial**. O nome pode variar conforme o aparelho e navegador.
+Compartilhe https://khassiooluver1988-droid.github.io/laraia/ com o cliente. Abra no Chrome do Android, abra **Menu → Instalar** e confirme. Se o navegador ainda não oferecer o botão de confirmação, abra o menu ⋮ e escolha **Instalar aplicativo** ou **Adicionar à tela inicial**. O nome pode variar conforme o aparelho e navegador.
 
 Após instalar, abra o ícone **Lara** na tela inicial ou na lista de aplicativos. Celular e tablet usam a mesma versão responsiva. Links abertos dentro de Instagram/WhatsApp devem ser abertos no navegador para instalar. A instalação depende da decisão do usuário e do suporte do navegador.
 
@@ -36,3 +36,7 @@ Verificação: `node --no-warnings test_local.cjs`, `node test_android.cjs` e `n
 ## Limites de validação
 
 Os testes locais verificam manifesto, recursos, ciclo de instalação/atualização, isolamento da API e funcionamento offline simulado. A instalação final e a permissão de microfone precisam ser verificadas em um Android físico. Nenhum APK foi gerado ou aplicativo publicado na Play Store.
+
+## Menu do atendimento
+
+Comprar, Alugar, Apartamento, Casa, Lançamento Village Pôr do Sol, Tenho dúvidas e Falar com especialista ficam no menu superior direito. Nova conversa, informações, instalação e atualização também ficam nesse menu. A área inferior mantém a composição de mensagem, microfone e envio, com os avisos temporários e as respostas rápidas da etapa atual quando necessários.
