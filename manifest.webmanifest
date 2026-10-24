@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Lara — Prime Lar Imobiliária",
+  "short_name": "Lara",
+  "description": "Converse com a Lara sobre compra, aluguel e oportunidades da Prime Lar Imobiliária.",
+  "lang": "pt-BR",
+  "start_url": "./?origem=app",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#062850",
+  "theme_color": "#062850",
+  "categories": ["lifestyle", "business"],
+  "icons": [
+    {"src": "assets/android/lara-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "assets/android/lara-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "assets/android/lara-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

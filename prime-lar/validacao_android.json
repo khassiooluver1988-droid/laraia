@@ -1,0 +1,14 @@
+{
+  "status": "aprovado",
+  "checks": [
+    "Manifesto com início no subdiretório correto e ícones PNG de dimensões reais.",
+    "Somente a interface real oferece o aplicativo; a prévia não é instalável como produção.",
+    "Instalação baixa o pacote completo; ativação limpa só as revisões da Lara e preserva cache de outros projetos.",
+    "Interface e ícone abrem sem rede após instalação, inclusive pelo start_url com parâmetros.",
+    "API, POST, recursos desconhecidos e páginas de outros projetos nunca são interceptados pelo cache.",
+    "Atualização só é ativada quando solicitada explicitamente.",
+    "Instalação aceita, recusada e confirmada pelo navegador tem estados distintos e permite nova tentativa.",
+    "Rascunho, áudio e resposta em andamento bloqueiam a atualização; só uma confirmação sem pendências ativa e recarrega.",
+    "Reconectar não envia mensagens nem recarrega a conversa automaticamente."
+  ]
+}

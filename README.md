@@ -1,5 +1,9 @@
 # Lara — Prime Lar Imobiliária
 
+## Aplicativo para Android
+
+A Lara agora inclui instalação pelo navegador (PWA), com ícone próprio e abertura em janela independente. Compartilhe https://khassiooluver1988-droid.github.io/laraia/ e abra no Chrome do Android; toque em **Instalar** no cabeçalho e siga as instruções. O atendimento por IA exige internet. Veja [orientações e reprodução](ANDROID.md) e [protocolo desta entrega](PROTOCOLO_LARA_ANDROID_20261024.txt). A instalação em aparelho físico ainda deve ser validada.
+
 A revisão 2.5 aplica a imagem digital atualizada da Lara e preserva o contrato de atendimento prime-lar-2.3. O atendimento preparado permite à Lara para esclarecer dúvidas de compra e aluguel no site da Prime Lar, reunir as respostas em um resumo revisável e permitir o retorno do especialista pelo WhatsApp informado. O botão “Fale com a Lara” abre o painel; as opções de resposta ficam acima da caixa de mensagem.
 
 ## Identidade e roteiro

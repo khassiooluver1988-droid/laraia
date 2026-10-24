@@ -29,6 +29,17 @@
 .shortcut[aria-pressed="true"]{background:#d8e8f7!important;border-color:#6086a8!important;color:#163d64!important;opacity:.8}.village-card{width:100%;max-width:540px;align-self:flex-start;background:#fff;border:1px solid #d6e1ec;border-radius:18px;overflow:hidden;flex:none}.village-card img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover}.village-card .card-text{padding:12px 14px}.village-card h2{font-size:17px;color:var(--deep);margin:0 0 5px}.village-card p{font-size:12px;margin:0 0 6px}.village-card small{font-size:10px;color:var(--muted)}.shortcuts>.help{background:#fff;border-color:#b38b45;color:#664511}.help-topics{display:grid;gap:9px}.help-topics button{width:100%;text-align:left;min-height:44px}.bottom{max-height:55dvh;overflow-y:auto}.protocol-subject{font-size:11px;margin-top:4px}
 @media(max-width:540px){.shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.shortcuts>.shortcut{font-size:12px;min-height:44px;padding:10px 8px}.shortcuts>.campaign{grid-column:1/-1;min-height:44px!important;margin-left:0!important}.shortcuts>.help,.shortcuts>.specialist{min-height:44px!important;margin-left:0!important;font-size:11px}.guide .shortcut{min-height:44px}.input-wrap textarea{font-size:16px}.entry{gap:6px}.village-card{max-width:100%}.village-card .card-text{padding:10px 12px}.dialog-body{padding:15px}.dialog-head{padding:15px}.brand-panel{min-height:55px}.brand-logo{height:42px;width:42px}.brand-intro h2{font-size:15px}.bottom{padding-bottom:max(10px,env(safe-area-inset-bottom))}.shortcuts>button:disabled:not([aria-pressed="true"]){opacity:.42}}
 </style>
+<!-- LARA_ANDROID_HEAD -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/android/lara-192.png">
+<link rel="apple-touch-icon" href="assets/android/lara-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lara">
+<link rel="stylesheet" href="android.css">
+<script src="android.js" defer></script>
+<!-- FIM_LARA_ANDROID_HEAD -->
 </head>
 <body>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden"><defs><image id="laraPhoto" width="1122" height="1402" href="assets/lara-prime-lar.webp"/><image id="primeLogo" width="447" height="447" href="assets/prime-lar-logo.jpg"/></defs></svg>
@@ -273,5 +284,19 @@ renderHistory();renderGuide();syncControls();fit();
 })();
 
 </script>
+<!-- LARA_ANDROID_BODY -->
+<dialog id="installDialog" aria-labelledby="installTitle">
+ <div class="dialog-head"><h2 id="installTitle">Lara no seu Android</h2><button class="close" id="closeInstall" type="button" aria-label="Fechar instruções de instalação">×</button></div>
+ <div class="dialog-body">
+  <div class="install-identity"><img src="assets/android/lara-192.png" width="72" height="72" alt="Ícone da Lara"><div><strong>Lara · Prime Lar</strong><p>Seu novo lar começa com uma conversa.</p></div></div>
+  <p>Tenha a Lara na tela inicial do celular ou tablet, com acesso direto ao atendimento da Prime Lar.</p>
+  <button class="btn primary" id="confirmInstall" type="button" hidden>Instalar aplicativo</button>
+  <p id="installStatus" role="status"></p>
+  <ol><li>Abra este link no <strong>Chrome do Android</strong>.</li><li>Toque em <strong>Instalar aplicativo</strong>. Se essa opção não aparecer aqui, abra o menu <strong>⋮</strong> do Chrome e procure <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</li><li>Confirme a instalação e abra o ícone <strong>Lara</strong>.</li></ol>
+  <p>Recebeu pelo Instagram ou WhatsApp? Use a opção de abrir no navegador para instalar.</p>
+  <small>O atendimento por inteligência artificial e a transcrição de áudio precisam de internet. A instalação é feita pelo navegador, sem download de APK ou publicação na Play Store.</small>
+ </div>
+</dialog>
+<!-- FIM_LARA_ANDROID_BODY -->
 </body></html>
 

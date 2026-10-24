@@ -1,0 +1,26 @@
+PROTOCOLO DE SERVIÇO — LARA PRIME LAR
+Código: LARA-ANDROID-20261024-001
+Data/hora de Brasília: 24/10/2026 01:30:58
+Projeto: Lara — Prime Lar Imobiliária
+Tipo: Conversão da interface atual em aplicativo web instalável no Android (PWA), versão 1.0.
+Base verificada: main 4939a3230008cb0267309210cac21a3256c348e1.
+Referência anterior: histórico do repositório consultado; não há protocolo de serviço anterior versionado com sequência verificável. 001 identifica esta entrega Android; a sequência geral não pôde ser confirmada.
+
+Descrição: manifesto instalável, ícones com o retrato digital existente, botão e instruções de instalação, cache dos recursos públicos, aviso de conexão, atualização com proteção de rascunho/áudio/resposta em andamento, ajustes para área segura e teclado no celular.
+Justificativa: abrir a Lara pela tela inicial do Android e compartilhar o acesso pelo mesmo endereço da interface.
+Endereço: https://khassiooluver1988-droid.github.io/laraia/
+
+Checklist:
+[OK] Mantidos atendimento, endpoint, avatar e jornada Village já versionados.
+[OK] 33 verificações existentes aprovadas.
+[OK] 9 verificações Android/PWA aprovadas, com rede e navegador simulados.
+[OK] Ícones 192/512 e maskable 512 com dimensões conferidas.
+[OK] Diálogo de instalação aberto e fechado no navegador de prévia; aparência conferida.
+[OK] Cache limitado aos arquivos públicos; API, POST, áudio e outros projetos não interceptados.
+[OK] Sem envio automático de mensagens ao reconectar.
+[OK] Atualização sem recarga automática e com bloqueio em caso de pendências na aba.
+[OK] Endpoint existente consultado: status ativo e contrato prime-lar-2.3; sem alteração do servidor.
+[PENDENTE] Instalação final e microfone em Android físico (não disponível neste ambiente).
+
+Status: preparação e validação local do aplicativo concluídas. Publicação acompanha o commit e o workflow do GitHub Pages; não equivale à instalação no aparelho do usuário.
+Formato: PWA instalável pelo navegador. Não é um APK nem uma publicação na Play Store.

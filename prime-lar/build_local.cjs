@@ -26,3 +26,5 @@ console.log('Interface e prévia compiladas; roteiro sincronizado com a função
 
 if(fs.existsSync('widget-preview-template.html'))fs.writeFileSync('LARA_PRIME_LAR_WIDGET_PREVIA.html',fs.readFileSync('widget-preview-template.html','utf8').replace('__PREVIEW_DATA__',()=>JSON.stringify(preview).replace(/</g,'\\u003c')));
 
+require('./build_android.cjs');
+
