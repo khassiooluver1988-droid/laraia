@@ -1,11 +1,11 @@
 'use strict';
-const REVISION = '56cbf60c602fb236';
+const REVISION = 'a45b9ae22a71e6e9';
 const PREFIX = 'lara-android-'+new URL(self.registration.scope).pathname.replace(/[^a-z0-9]/gi,'_')+'-';
 const CACHE = PREFIX+REVISION;
 const CORE = ["index.html","android.js","android.css","manifest.webmanifest","assets/lara-prime-lar.webp","assets/prime-lar-logo.jpg","assets/village-por-do-sol.webp","assets/android/lara-192.png","assets/android/lara-512.png","assets/android/lara-maskable-512.png"].map(file => new URL(file,self.registration.scope).href);
 const HOME = new URL('index.html',self.registration.scope).href;
 self.addEventListener('install', event => {
- event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)));
+ event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE.map(url => new Request(url,{cache:'reload'})))));
 });
 self.addEventListener('activate', event => {
  event.waitUntil((async () => {

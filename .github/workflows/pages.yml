@@ -19,6 +19,14 @@ jobs:
     steps:
       - name: Baixar arquivos
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Gerar versão atualizada do aplicativo
+        run: node prime-lar/build_publish.cjs
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
         with:

@@ -1,0 +1,23 @@
+PROTOCOLO DE SERVIÇO — LARA PRIME LAR
+Código: LARA-ANDROID-20261024-002
+Data/hora de Brasília: 24/10/2026 01:51:42
+Projeto: Lara — Prime Lar Imobiliária
+Tipo: Botão permanente Atualizar Lara e geração automática de versão na publicação.
+Referência anterior confirmada: LARA-ANDROID-20261024-001, commit 226cda1134a8059dae2858043bc3bbc2a2e2b84f.
+Sequência: 002 na série Android deste projeto; a sequência geral de outros serviços não foi verificada.
+
+Descrição: botão abaixo da caixa de mensagem, diálogo com consulta de versão, opção Atualizar agora, mensagens para versão atual, falta de internet, falha e download. Publicação no GitHub Pages agora gera a revisão do aplicativo automaticamente. Edições diretas em index.html são preservadas quando as fontes não foram modificadas; alterações nas fontes recompilam a interface.
+Justificativa: permitir ao cliente verificar e aplicar novidades sem reinstalar a Lara e disponibilizar alterações salvas no GitHub para aplicativos já instalados.
+
+Checklist:
+[OK] 33 verificações anteriores aprovadas.
+[OK] 10 verificações Android/PWA aprovadas, incluindo estados de atualização, proteção de rascunho, áudio e resposta em andamento.
+[OK] 3 testes de publicação com repositório temporário: edição direta, edição de fontes e revisão do service worker.
+[OK] Cache da atualização busca arquivos novos sem reutilizar a versão antiga do cache HTTP.
+[OK] Atualização manual recarrega somente após solicitação explícita e sem pendências na aba.
+[OK] Botão e diálogo conferidos no navegador de prévia.
+[OK] Não altera banco ou função de atendimento.
+[PENDENTE] Verificação da atualização em Android físico.
+
+Status: implementação e verificações locais concluídas; a publicação é confirmada pelo workflow do commit correspondente.
+Acesso: https://khassiooluver1988-droid.github.io/laraia/

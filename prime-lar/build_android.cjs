@@ -29,12 +29,22 @@ const body = `<!-- LARA_ANDROID_BODY -->
   <small>O atendimento por inteligência artificial e a transcrição de áudio precisam de internet. A instalação é feita pelo navegador, sem download de APK ou publicação na Play Store.</small>
  </div>
 </dialog>
+<dialog id="updateDialog" aria-labelledby="updateTitle">
+ <div class="dialog-head"><h2 id="updateTitle">Atualizar Lara</h2><button class="close" id="closeUpdate" type="button" aria-label="Fechar atualização">×</button></div>
+ <div class="dialog-body">
+  <p>Verifique se há uma nova versão da Lara para este aparelho.</p>
+  <p id="updateStatus" role="status" aria-live="polite">Toque em verificar para buscar atualizações.</p>
+  <div class="dialog-actions"><button class="btn" id="checkUpdate" type="button">Verificar novamente</button><button class="btn primary" id="applyUpdate" type="button" hidden>Atualizar agora</button></div>
+  <small>Antes de atualizar, termine de enviar sua mensagem ou áudio e aguarde a resposta. Não é necessário reinstalar o aplicativo.</small>
+ </div>
+</dialog>
 <!-- FIM_LARA_ANDROID_BODY -->`;
 html = html.replace('</head>', head+'\n</head>').replace('</body>', body+'\n</body>');
 fs.writeFileSync(path.join(root, 'index.html'), html);
 const core = ['index.html','android.js','android.css','manifest.webmanifest','assets/lara-prime-lar.webp','assets/prime-lar-logo.jpg','assets/village-por-do-sol.webp','assets/android/lara-192.png','assets/android/lara-512.png','assets/android/lara-maskable-512.png'];
 const digest = crypto.createHash('sha256');
 for (const file of core) digest.update(fs.readFileSync(path.join(root, file)));
+digest.update(read('prime-lar/sw-template.js'));
 const revision = digest.digest('hex').slice(0, 16);
 const worker = read('prime-lar/sw-template.js').replace('__REVISION__', revision).replace('__CORE_FILES__', JSON.stringify(core));
 fs.writeFileSync(path.join(root, 'sw.js'), worker);

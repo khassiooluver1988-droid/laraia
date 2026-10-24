@@ -14,11 +14,11 @@ async function workerTests(){
  const scope='https://test.example/laraia/';
  const cacheApi={keys:async()=>[...stores.keys()],delete:async key=>stores.delete(key),open:async name=>{
   if(!stores.has(name))stores.set(name,new Map());const data=stores.get(name);
-  return {addAll:async urls=>{const responses=await Promise.all(urls.map(url=>network(url)));urls.forEach((url,i)=>data.set(url,responses[i]));},match:async url=>data.get(typeof url==='string'?url:url.url)?.clone()};
+  return {addAll:async urls=>{assert(urls.every(request=>request.cache==='reload'));const responses=await Promise.all(urls.map(url=>network(url)));urls.forEach((url,i)=>data.set(typeof url==='string'?url:url.url,responses[i]));},match:async url=>data.get(typeof url==='string'?url:url.url)?.clone()};
  }};
  async function network(input){networkCalls++;if(!online)throw Error('offline');const url=new URL(typeof input==='string'?input:input.url);const name=url.pathname.replace('/laraia/','');return new Response(read(name));}
  const self={registration:{scope},clients:{claim:async()=>{claimed=true;}},skipWaiting:()=>{skipped=true;},addEventListener:(type,fn)=>handlers[type]=fn};
- vm.runInNewContext(read('sw.js').toString(),{self,caches:cacheApi,URL,fetch:network});
+ vm.runInNewContext(read('sw.js').toString(),{self,caches:cacheApi,URL,Request,fetch:network});
  async function lifecycle(type){let promise;handlers[type]({waitUntil:p=>promise=p});await promise;}
  async function request(url,method='GET',mode='cors'){let result;handlers.fetch({request:{url,method,mode},respondWith:p=>result=p});return result?{handled:true,response:await result}:{handled:false};}
  await lifecycle('install');assert(networkCalls>=10);assert.equal(skipped,false);
@@ -55,7 +55,8 @@ async function installTests(){
  const get=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
  get('audioBox').hidden=true;
  const document={getElementById:get,createElement:()=>{const e=new Element();created.push(e);return e;},querySelector:get,documentElement:new Element()};
- const workerMessages=[],registration={waiting:{postMessage:m=>workerMessages.push(m)},addEventListener(){}};
+ let updateCalls=0,failUpdate=false;
+ const registrationEvents={},workerMessages=[],registration={waiting:{postMessage:m=>workerMessages.push(m)},update:async()=>{updateCalls++;if(failUpdate)throw Error('network');},addEventListener:(type,fn)=>registrationEvents[type]=fn};
  const navigator={onLine:true,serviceWorker:{controller:{},register:async()=>registration,addEventListener:(type,fn)=>swEvents[type]=fn}};
  const window={isSecureContext:true,addEventListener:(type,fn)=>events[type]=fn,location:{reload:()=>reloads++}};window.self=window;window.top=window;
  vm.runInNewContext(read('android.js').toString(),{window,navigator,document,matchMedia:()=>({matches:false})});
@@ -69,12 +70,22 @@ async function installTests(){
  await get('confirmInstall').fire('click');assert.match(get('installStatus').textContent,/solicitada/);
  events.appinstalled();assert.match(get('installStatus').textContent,/instalada/);
  checks.push('Instalação aceita, recusada e confirmada pelo navegador tem estados distintos e permite nova tentativa.');
+ const permanent=created.find(e=>e.id==='updateLara');assert(permanent);assert.equal(permanent.hidden,false);
+ await permanent.fire('click');await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(get('updateDialog').open,true);assert.equal(updateCalls,1);assert.equal(get('applyUpdate').hidden,false);assert.match(get('updateStatus').textContent,/Nova versão pronta/);
+ navigator.onLine=false;await get('checkUpdate').fire('click');assert.equal(updateCalls,1);assert.match(get('updateStatus').textContent,/sem internet/);
+ navigator.onLine=true;failUpdate=true;await get('checkUpdate').fire('click');await new Promise(resolve=>setImmediate(resolve));assert.match(get('updateStatus').textContent,/Não foi possível/);assert.equal(get('checkUpdate').disabled,false);
+ failUpdate=false;const waiting=registration.waiting;registration.waiting=null;await get('checkUpdate').fire('click');await new Promise(resolve=>setImmediate(resolve));assert.match(get('updateStatus').textContent,/já está atualizada/);assert.equal(get('applyUpdate').hidden,true);
+ const workerEvents={};const worker={state:'installing',addEventListener:(type,fn)=>workerEvents[type]=fn};registration.installing=worker;registrationEvents.updatefound();assert.match(get('updateStatus').textContent,/Baixando/);
+ worker.state='redundant';workerEvents.statechange();assert.match(get('updateStatus').textContent,/Não foi possível baixar/);
+ registration.installing=null;registration.waiting=waiting;worker.state='installed';workerEvents.statechange();assert.equal(get('applyUpdate').hidden,false);
+ checks.push('Botão permanente verifica a versão e distingue atualização pronta, sem internet, falha, versão atual, download e falha de instalação.');
  const apply=created.find(e=>e.textContent==='Atualizar');assert(apply);
  get('message').value='Meu rascunho';await apply.fire('click');assert.equal(workerMessages.length,0);
  get('message').value='';get('audioBox').hidden=false;await apply.fire('click');assert.equal(workerMessages.length,0);
  get('audioBox').hidden=true;get('send').disabled=true;await apply.fire('click');assert.equal(workerMessages.length,0);
  get('send').disabled=false;swEvents.controllerchange();assert.equal(reloads,0);
- await apply.fire('click');assert.equal(workerMessages[0].type,'LARA_APPLY_UPDATE');swEvents.controllerchange();assert.equal(reloads,1);
+ await get('applyUpdate').fire('click');assert.equal(workerMessages[0].type,'LARA_APPLY_UPDATE');swEvents.controllerchange();assert.equal(reloads,1);
  checks.push('Rascunho, áudio e resposta em andamento bloqueiam a atualização; só uma confirmação sem pendências ativa e recarrega.');
  const sent=workerMessages.length;
  navigator.onLine=false;events.offline();navigator.onLine=true;events.online();

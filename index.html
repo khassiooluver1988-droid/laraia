@@ -297,6 +297,15 @@ renderHistory();renderGuide();syncControls();fit();
   <small>O atendimento por inteligência artificial e a transcrição de áudio precisam de internet. A instalação é feita pelo navegador, sem download de APK ou publicação na Play Store.</small>
  </div>
 </dialog>
+<dialog id="updateDialog" aria-labelledby="updateTitle">
+ <div class="dialog-head"><h2 id="updateTitle">Atualizar Lara</h2><button class="close" id="closeUpdate" type="button" aria-label="Fechar atualização">×</button></div>
+ <div class="dialog-body">
+  <p>Verifique se há uma nova versão da Lara para este aparelho.</p>
+  <p id="updateStatus" role="status" aria-live="polite">Toque em verificar para buscar atualizações.</p>
+  <div class="dialog-actions"><button class="btn" id="checkUpdate" type="button">Verificar novamente</button><button class="btn primary" id="applyUpdate" type="button" hidden>Atualizar agora</button></div>
+  <small>Antes de atualizar, termine de enviar sua mensagem ou áudio e aguarde a resposta. Não é necessário reinstalar o aplicativo.</small>
+ </div>
+</dialog>
 <!-- FIM_LARA_ANDROID_BODY -->
 </body></html>
 

@@ -5,7 +5,7 @@ const CACHE = PREFIX+REVISION;
 const CORE = __CORE_FILES__.map(file => new URL(file,self.registration.scope).href);
 const HOME = new URL('index.html',self.registration.scope).href;
 self.addEventListener('install', event => {
- event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)));
+ event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE.map(url => new Request(url,{cache:'reload'})))));
 });
 self.addEventListener('activate', event => {
  event.waitUntil((async () => {

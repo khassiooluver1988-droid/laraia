@@ -2,6 +2,14 @@
 
 Aplicativo web instalável (PWA) sobre a interface atual da Lara. A instalação usa o Chrome no Android, sem APK e sem loja. Não modifica a função de atendimento, as tabelas ou o roteiro existente.
 
+## Atualizar Lara
+
+O botão **Atualizar Lara**, sempre disponível abaixo da caixa de mensagem, abre a verificação de novas versões. Com internet, ele consulta a publicação e informa se há uma atualização pronta. Toque em **Atualizar agora** para aplicar. Rascunho, áudio aberto ou resposta em andamento impedem a recarga até terminar essa etapa.
+
+Ao salvar alterações na branch `main`, o GitHub Actions gera automaticamente o aplicativo e a nova revisão do cache antes de publicar. Se a alteração foi feita diretamente no `index.html`, ela é preservada. Alterações nas fontes `prime-lar/template.html`, `prime-lar/app.js` ou `prime-lar/build_local.cjs` recompilam a interface a partir dessas fontes. Se o mesmo conjunto de commits alterar fontes e `index.html`, as fontes são a versão canônica.
+
+As mudanças só ficam disponíveis após sucesso do workflow de publicação. Alterações em função de IA ou banco do Supabase continuam exigindo implantação própria; o botão atualiza a interface publicada.
+
 ## Instalar e compartilhar
 
 Compartilhe https://khassiooluver1988-droid.github.io/laraia/ com o cliente. Abra no Chrome do Android, toque em **Instalar** no cabeçalho e confirme. Se o navegador ainda não oferecer o botão de confirmação, abra o menu ⋮ e escolha **Instalar aplicativo** ou **Adicionar à tela inicial**. O nome pode variar conforme o aparelho e navegador.
@@ -23,7 +31,7 @@ Os ícones exportados ficam versionados. Para recriá-los: `python prime-lar/bui
 
 Em `prime-lar`, rode `node build_local.cjs`. O build gera a interface real, injeta o manifesto/instalador e calcula uma revisão a partir de todos os arquivos do cache. Após qualquer alteração nos arquivos públicos do aplicativo, execute o build para atualizar `sw.js`.
 
-Verificação: `node --no-warnings test_local.cjs` e `node test_android.cjs`, dentro de `prime-lar`.
+Verificação: `node --no-warnings test_local.cjs`, `node test_android.cjs` e `node test_publish.cjs`, dentro de `prime-lar`.
 
 ## Limites de validação
 

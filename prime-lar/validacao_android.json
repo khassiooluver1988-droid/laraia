@@ -8,6 +8,7 @@
     "API, POST, recursos desconhecidos e páginas de outros projetos nunca são interceptados pelo cache.",
     "Atualização só é ativada quando solicitada explicitamente.",
     "Instalação aceita, recusada e confirmada pelo navegador tem estados distintos e permite nova tentativa.",
+    "Botão permanente verifica a versão e distingue atualização pronta, sem internet, falha, versão atual, download e falha de instalação.",
     "Rascunho, áudio e resposta em andamento bloqueiam a atualização; só uma confirmação sem pendências ativa e recarrega.",
     "Reconectar não envia mensagens nem recarrega a conversa automaticamente."
   ]
