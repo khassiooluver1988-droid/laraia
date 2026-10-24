@@ -37,13 +37,13 @@ async function gerar(chave: string, body: unknown) {
  let r: Response | null = null;
  for (let tentativa=0;tentativa<2;tentativa++) {
   try {
-   r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":chave},body:JSON.stringify(body),signal:AbortSignal.timeout(tentativa?10000:14000)});
+   r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":chave},body:JSON.stringify(body),signal:AbortSignal.timeout(tentativa?20000:35000)});
    if(r.ok||![429,500,502,503,504].includes(r.status))break;
    await r.body?.cancel();
   }catch(e){
    const name=e instanceof Error?e.name:'';
    if(!tentativa&&['TimeoutError','AbortError','TypeError'].includes(name)){console.warn('Prime Lar provider retry',name);}
-   else throw new Error('PROVIDER_UNAVAILABLE');
+   else throw new Error(['TimeoutError','AbortError'].includes(name)?'PROVIDER_TIMEOUT':'PROVIDER_UNAVAILABLE');
   }
   if(!tentativa)await new Promise(resolve=>setTimeout(resolve,350));
  }
@@ -118,7 +118,7 @@ export default { fetch: withSupabase({ auth: "none" }, async (req, ctx) => {
  const reply = (data: unknown, status = 200) => Response.json(data, { status, headers });
  if (origin && !ORIGINS.has(origin)) return reply({ erro: "Origem não autorizada." }, 403);
  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
- if (req.method === "GET") return reply({ status: "ativo", marca: "Prime Lar Imobiliária", versao: VERSION, audio: "wav", encaminhamento: "equipe_consulta_supabase", revisao: "2.6", protocolo: "PL/AAAA/00000001", fonte_village: "consulta_oficial_em_segundo_plano" });
+ if (req.method === "GET") return reply({ status: "ativo", marca: "Prime Lar Imobiliária", versao: VERSION, audio: "wav", encaminhamento: "equipe_consulta_supabase", revisao: "2.7", protocolo: "PL/AAAA/00000001", fonte_village: "consulta_oficial_em_segundo_plano" });
  if (req.method !== "POST") return reply({ erro: "Método inválido." }, 405);
  if (Number(req.headers.get("Content-Length") || 0) > 2900000) return reply({ erro: "Conteúdo muito grande." }, 413);
  let d: Record<string, unknown>;
@@ -201,7 +201,8 @@ export default { fetch: withSupabase({ auth: "none" }, async (req, ctx) => {
   return reply({...cred,...saved.data});
  } catch(e) {
   console.error("Prime Lar request failed",e instanceof Error&&/^(PROVIDER_|EMPTY)/.test(e.message)?e.message:"RESPONSE_UNAVAILABLE");
-  return reply({ ...cred, erro: "Não consegui responder agora. Tente novamente ou fale com a Prime Lar pelo Instagram." }, 502);
+  const lenta=e instanceof Error&&e.message==='PROVIDER_TIMEOUT';
+  return reply({ ...cred, codigo:lenta?'RESPOSTA_DEMORADA':'SERVICO_INDISPONIVEL', erro:lenta?"A resposta demorou mais que o esperado. Sua mensagem pode ser reenviada; toque em Tentar novamente.":"Não consegui responder agora. Tente novamente ou fale com a Prime Lar pelo Instagram." }, 502);
  }
 }) };
 

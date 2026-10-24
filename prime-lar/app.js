@@ -38,6 +38,7 @@ function syncControls(){
  $('startRecord').disabled=busy||requestingMic||audioBusy;
  $('stopRecord').disabled=audioBusy;$('transcribe').disabled=busy||audioBusy;
  $('discardAudio').disabled=audioBusy;
+ $('retryMessage').disabled=block;$('retryMessage').hidden=!lastFailure||busy;
 }
 function normalizarTelefone(value) {
  if (typeof value !== 'string' || /\b(?:cpf|rg|documento)\b/i.test(value) || /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/.test(value)) return '';
@@ -97,7 +98,7 @@ function renderHistory(){
  bubble(greeting);history.forEach(m=>{if(m&&typeof m.text==='string'){if(/village\s+p[oô]r\s+do\s+sol/i.test(m.text))showVillageCard();bubble(m.text,m.role==='me');}});
 }
 async function call(payload){
- const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),55000);
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),95000);
  try{
   const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,...payload}),signal:ctrl.signal});
   let d;try{d=await r.json();}catch{throw Error('O atendimento retornou uma resposta inesperada. Tente novamente.');}
@@ -116,6 +117,8 @@ async function send(text){
  voice.stop();feedback.textContent='';busy=true;syncControls();let spokenReply='';
  const requestId=lastFailure?.text===mensagem?lastFailure.requestId:crypto.randomUUID();
  const mine=bubble(mensagem,true),reply=bubble('A Lara está respondendo...',false,true);field.value='';fit();
+ const slowNotice=setTimeout(()=>{reply.body.textContent='Estou preparando sua resposta. Aguarde um momento…';},8000);
+ const waitingNotice=setTimeout(()=>{reply.body.textContent='A conexão está demorando um pouco. Ainda estou aguardando sua resposta…';},25000);
  try{
   await ensureSession();const d=await call({acao:'chat',mensagem,request_id:requestId});
   if(typeof d.resposta!=='string'||!d.resposta.trim())throw Error('Não recebi uma resposta. Tente novamente.');
@@ -124,7 +127,7 @@ async function send(text){
  }catch(e){
   mine.item.remove();reply.item.remove();if(!field.value.trim())field.value=mensagem;fit();lastFailure={text:mensagem,requestId};
   feedback.textContent=e.name==='AbortError'?'O atendimento demorou. Sua mensagem foi preservada; toque em Enviar para tentar novamente.':e.message;
- }finally{busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;if(spokenReply)voice.onReply(spokenReply);}
+ }finally{clearTimeout(slowNotice);clearTimeout(waitingNotice);busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;if(spokenReply)voice.onReply(spokenReply);}
 }
 function showVillageCard(){
  if(villageCardVisible)return;villageCardVisible=true;
@@ -197,6 +200,7 @@ async function transcribe(){
  finally{audioBusy=false;syncControls();field.focus();}
 }
 $('form').addEventListener('submit',e=>{e.preventDefault();send(field.value);});
+$('retryMessage').addEventListener('click',()=>send(field.value.trim()||lastFailure?.text||''));
 field.addEventListener('input',fit);
 field.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send(field.value);}});
 document.querySelectorAll('[data-message]').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.message)));

@@ -1,0 +1,17 @@
+{
+  "data_brasilia": "2026-10-24T02:36:25.807468-03:00",
+  "funcao": "lara-chat",
+  "versao_supabase": 12,
+  "revisao_servico": "2.7",
+  "contrato": "prime-lar-2.3",
+  "testes_locais": 56,
+  "teste_real": {
+    "resposta_http": 200,
+    "tempo_resposta_segundos": 12.04,
+    "reenvio_http": 200,
+    "mesma_resposta_no_reenvio": true,
+    "registros_usuario": 1,
+    "registros_resposta": 1
+  },
+  "limites": "O tempo medido é apenas deste teste; não é garantia de latência ou disponibilidade."
+}

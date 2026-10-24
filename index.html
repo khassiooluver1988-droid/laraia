@@ -31,6 +31,7 @@ body{background:#062440}.wrap{padding:18px}.experience{display:flex;max-width:82
 @media(max-width:860px){body{background:#062440}.wrap{padding:0}.app{border:0;border-radius:0}.reference-header{padding:16px 17px 21px;padding-top:max(16px,env(safe-area-inset-top))}.header-logo{width:206px}.brand-app-label{font-size:9px}.reference-header .avatar{height:57px;width:57px}.content{padding:25px 12px}.bottom{padding:0 11px max(13px,env(safe-area-inset-bottom))}.bubble{font-size:16px;padding:15px 15px 17px}.msg{gap:8px}.mini{width:38px;height:38px}.header-profile{gap:9px}}
 @media(max-width:360px){.reference-header{padding:13px 15px 18px}.header-logo{width:174px}.reference-header .avatar{height:49px;width:49px}.reference-header .menu-trigger{min-height:40px;min-width:43px}.brand-app-label{font-size:8px}.content{padding:20px 10px}.mini{height:32px;width:32px}.bubble{font-size:15px;padding:13px 13px 15px}.msg{gap:7px}.bottom{padding-left:9px;padding-right:9px}.entry{gap:7px}.mic,.send{width:45px;min-height:65px}.input-wrap{padding:10px;min-height:65px}.voice-toggle{min-height:43px}.voice-actions button{min-height:41px}.voice-info{font-size:9px}.voice-status{font-size:10px}}
 @media(max-height:620px){.reference-header{padding-top:9px;padding-bottom:15px}.header-logo{width:153px}.reference-header .avatar{height:43px;width:43px}.header-profile{gap:7px}.reference-header .menu-trigger{min-height:34px;min-width:40px}.brand-app-label{font-size:8px}.voice-panel{padding:8px 0}.voice-toggle{min-height:36px}.voice-actions{margin-top:6px}.voice-actions button{min-height:34px}.voice-info{margin-top:6px}.voice-status{margin-top:3px}.bottom{padding-bottom:max(9px,env(safe-area-inset-bottom))}.mic,.send,.input-wrap{min-height:58px}.content{padding-top:18px}}
+.retry-message{min-height:42px;padding:9px 14px;border:1px solid #dcbd81;border-radius:12px;background:#f7e7c4;color:#5c421c;font-size:12px;font-weight:700;margin:0 0 10px}.retry-message[hidden]{display:none}
 </style>
 <!-- LARA_ANDROID_HEAD -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -57,6 +58,7 @@ body{background:#062440}.wrap{padding:18px}.experience{display:flex;max-width:82
 
 <div class="audio-box" id="audioBox" hidden><div class="audio-top"><strong id="audioStatus">Gravar uma mensagem</strong><span class="time" id="recordTime">00:00 / 01:00</span></div><p>Ao transcrever, o áudio será processado por IA. O texto volta para esta caixa para você revisar e enviar.</p><audio id="audioPreview" controls hidden></audio><div class="audio-controls"><button class="btn primary" id="startRecord" type="button">Gravar áudio</button><button class="btn" id="stopRecord" type="button" hidden>Parar</button><button class="btn primary" id="transcribe" type="button" hidden>Transcrever</button><button class="btn" id="discardAudio" type="button">Cancelar</button></div></div>
 <section class="voice-panel" aria-label="Ouvir as respostas da Lara"><button class="voice-toggle" id="toggleVoice" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 3a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg><span id="voiceToggleLabel">Ativar voz da Lara</span></button><div class="voice-actions"><button id="readReply" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 4 13 8-13 8Z"/></svg>Ouvir resposta</button><button id="stopVoice" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="1"/></svg>Parar</button></div><p class="voice-info" id="voiceInfo">Português do Brasil · voz do aparelho</p><p class="voice-status" id="voiceStatus" role="status" aria-live="polite">Toque em Ouvir resposta para escutar a Lara.</p></section><p class="feedback" id="feedback" role="status"></p>
+<button class="retry-message" id="retryMessage" type="button" hidden>Tentar novamente</button>
 <form class="entry" id="form"><div class="input-wrap"><textarea id="message" maxlength="1500" placeholder="Digite sua mensagem aqui..." rows="1" aria-label="Mensagem para a Lara" autocomplete="off" required></textarea></div><button class="mic" id="microphone" type="button" aria-label="Gravar áudio para transcrever" title="Gravar áudio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg><span>Falar</span></button><button class="send" id="send" type="submit" aria-label="Enviar mensagem" title="Enviar mensagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m21 3-6 18-4-8-8-4Z"/><path d="m21 3-10 10"/></svg><span>Enviar</span></button></form>
 
 </section></div></div></div>
@@ -106,6 +108,7 @@ function syncControls(){
  $('startRecord').disabled=busy||requestingMic||audioBusy;
  $('stopRecord').disabled=audioBusy;$('transcribe').disabled=busy||audioBusy;
  $('discardAudio').disabled=audioBusy;
+ $('retryMessage').disabled=block;$('retryMessage').hidden=!lastFailure||busy;
 }
 function normalizarTelefone(value) {
  if (typeof value !== 'string' || /\b(?:cpf|rg|documento)\b/i.test(value) || /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/.test(value)) return '';
@@ -165,7 +168,7 @@ function renderHistory(){
  bubble(greeting);history.forEach(m=>{if(m&&typeof m.text==='string'){if(/village\s+p[oô]r\s+do\s+sol/i.test(m.text))showVillageCard();bubble(m.text,m.role==='me');}});
 }
 async function call(payload){
- const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),55000);
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),95000);
  try{
   const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,...payload}),signal:ctrl.signal});
   let d;try{d=await r.json();}catch{throw Error('O atendimento retornou uma resposta inesperada. Tente novamente.');}
@@ -184,6 +187,8 @@ async function send(text){
  voice.stop();feedback.textContent='';busy=true;syncControls();let spokenReply='';
  const requestId=lastFailure?.text===mensagem?lastFailure.requestId:crypto.randomUUID();
  const mine=bubble(mensagem,true),reply=bubble('A Lara está respondendo...',false,true);field.value='';fit();
+ const slowNotice=setTimeout(()=>{reply.body.textContent='Estou preparando sua resposta. Aguarde um momento…';},8000);
+ const waitingNotice=setTimeout(()=>{reply.body.textContent='A conexão está demorando um pouco. Ainda estou aguardando sua resposta…';},25000);
  try{
   await ensureSession();const d=await call({acao:'chat',mensagem,request_id:requestId});
   if(typeof d.resposta!=='string'||!d.resposta.trim())throw Error('Não recebi uma resposta. Tente novamente.');
@@ -192,7 +197,7 @@ async function send(text){
  }catch(e){
   mine.item.remove();reply.item.remove();if(!field.value.trim())field.value=mensagem;fit();lastFailure={text:mensagem,requestId};
   feedback.textContent=e.name==='AbortError'?'O atendimento demorou. Sua mensagem foi preservada; toque em Enviar para tentar novamente.':e.message;
- }finally{busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;if(spokenReply)voice.onReply(spokenReply);}
+ }finally{clearTimeout(slowNotice);clearTimeout(waitingNotice);busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;if(spokenReply)voice.onReply(spokenReply);}
 }
 function showVillageCard(){
  if(villageCardVisible)return;villageCardVisible=true;
@@ -265,6 +270,7 @@ async function transcribe(){
  finally{audioBusy=false;syncControls();field.focus();}
 }
 $('form').addEventListener('submit',e=>{e.preventDefault();send(field.value);});
+$('retryMessage').addEventListener('click',()=>send(field.value.trim()||lastFailure?.text||''));
 field.addEventListener('input',fit);
 field.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send(field.value);}});
 document.querySelectorAll('[data-message]').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.message)));

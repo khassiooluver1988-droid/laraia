@@ -5,7 +5,7 @@ const check=(s)=>checks.push(s);
 const tick=()=>new Promise(r=>setImmediate(r));
 
 async function backend(){
- let providerCalls=0,quotaCalls=0,quotaEnabled=true,providerFail=false,modelEmpty=false,modelOverride=null,timeoutOnce=false;
+ let providerCalls=0,quotaCalls=0,quotaEnabled=true,providerFail=false,modelEmpty=false,modelOverride=null,timeoutOnce=false,timeoutAlways=false;const timeouts=[];
  const sessions=[],messages=[],payloads=[];
  class Query{
   constructor(table){this.table=table;this.filters=[];this.operation='select';}
@@ -38,8 +38,8 @@ async function backend(){
   }
   return {data:false,error:null};
  }};
- const context={console,Error,Response,Request,AbortSignal,TextEncoder,Uint8Array,crypto:webcrypto,atob,URL,setTimeout:(fn)=>{fn();return 0;},Deno:{env:{get:()=> 'fixture-key'}},withSupabase:(config,handler)=>(req)=>handler(req,{supabaseAdmin:db}),fetch:async(url,init)=>{
-  providerCalls++;if(timeoutOnce){timeoutOnce=false;throw Object.assign(Error("fixture timeout"),{name:"TimeoutError"});}const p=JSON.parse(init.body);payloads.push(p);if(providerFail)return new Response('{}',{status:503});
+ const context={console,Error,Response,Request,AbortSignal:{timeout:ms=>{timeouts.push(ms);return undefined;}},TextEncoder,Uint8Array,crypto:webcrypto,atob,URL,setTimeout:(fn)=>{fn();return 0;},Deno:{env:{get:()=> 'fixture-key'}},withSupabase:(config,handler)=>(req)=>handler(req,{supabaseAdmin:db}),fetch:async(url,init)=>{
+  providerCalls++;if(timeoutOnce||timeoutAlways){timeoutOnce=false;throw Object.assign(Error("fixture timeout"),{name:"TimeoutError"});}const p=JSON.parse(init.body);payloads.push(p);if(providerFail)return new Response('{}',{status:503});
   const isAudio=p.contents[0]?.parts?.[0]?.inlineData;
   const obj=isAudio?{texto:modelEmpty?'':'Meu nome é Ana e quero alugar um apartamento.'}:(modelOverride||{resposta:'Ana, você procura alugar um apartamento em Teresina. Qual é seu orçamento mensal?',perfil:{nome:'Ana',finalidade:'alugar',tipo:'apartamento',localizacao:'Teresina',orcamento:'R$ 1.500 por mês',necessidades:'',prazo:'',pagamento:'',empreendimento:'',extra:'não deve sair'},etapa:'ocupacao',pronto_para_especialista:false});
   return Response.json({candidates:[{content:{parts:[{text:JSON.stringify(obj)}]}}]});
@@ -62,7 +62,7 @@ async function backend(){
  quotaEnabled=false;assert.equal((await call({...cred,mensagem:'mais uma',request_id:webcrypto.randomUUID()})).status,429);quotaEnabled=true;
  let msgBefore=messages.length;providerFail=true;assert.equal((await call({...cred,mensagem:'teste de falha',request_id:webcrypto.randomUUID()})).status,502);assert.equal(messages.length,msgBefore);providerFail=false;
  check('Servidor: cota e falha do provedor retornam erro sem histórico parcial.');
- timeoutOnce=true;const retriesBefore=providerCalls;const recovered=await call({...cred,mensagem:'Teste de recuperação',request_id:webcrypto.randomUUID()});assert.equal(recovered.status,200);assert.equal(providerCalls,retriesBefore+2);check('Servidor: timeout temporário faz uma segunda tentativa e registra a resposta recuperada.');msgBefore=messages.length;
+ timeoutOnce=true;const retriesBefore=providerCalls;const recovered=await call({...cred,mensagem:'Teste de recuperação',request_id:webcrypto.randomUUID()});assert.equal(recovered.status,200);assert.equal(providerCalls,retriesBefore+2);assert.deepEqual(timeouts.slice(-2),[35000,20000]);check('Servidor: timeout temporário tem margem de 35/20 segundos e uma segunda tentativa registra a resposta recuperada.');msgBefore=messages.length;timeoutAlways=true;const timedOut=await call({...cred,mensagem:'Simular indisponibilidade prolongada',request_id:webcrypto.randomUUID()});timeoutAlways=false;assert.equal(timedOut.status,502);assert.equal(timedOut.data.codigo,'RESPOSTA_DEMORADA');assert.equal(messages.length,msgBefore);check('Servidor: timeout persistente devolve erro identificável sem salvar uma resposta inventada.');
  const wav=Buffer.alloc(16044);wav.write('RIFF',0);wav.write('WAVE',8);const audio=wav.toString('base64');
  const t=await call({...cred,acao:'transcrever',audio,mime_type:'audio/wav'});assert.equal(t.status,200);assert.ok(t.data.texto.includes('Ana'));assert.equal(messages.length,msgBefore);assert.equal(payloads.at(-1).contents[0].parts[0].inlineData.mimeType,'audio/wav');
  modelEmpty=true;assert.equal((await call({...cred,acao:'transcrever',audio,mime_type:'audio/wav'})).status,422);
@@ -112,7 +112,7 @@ async function frontend(){
  const shortcuts=[...html.matchAll(/data-message="([^"]+)"/g)].map((m,i)=>{const n=new Element('shortcut'+i);n.dataset.message=m[1];return n;});
  const closes=[...html.matchAll(/data-close="([^"]+)"/g)].map(m=>{const n=new Element();n.dataset.close=m[1];return n;});
  const storage=()=>({data:{},getItem(k){return this.data[k]??null;},setItem(k,v){this.data[k]=v;},removeItem(k){delete this.data[k];}});
- const localStorage=storage(),sessionStorage=storage(),calls=[];let fail=false,tracksStopped=0,denied=false,mediaRecorders=[];
+ const localStorage=storage(),sessionStorage=storage(),calls=[],notices=[];let held=false,finishResponse;let fail=false,tracksStopped=0,denied=false,mediaRecorders=[];
  class Recorder{
   static isTypeSupported(){return true;}constructor(s,o){this.mimeType=o.mimeType;this.state='inactive';mediaRecorders.push(this);}start(){this.state='recording';}stop(){this.state='inactive';this.ondataavailable({data:new Blob(['fixture'])});this.onstop();}
  }
@@ -120,21 +120,21 @@ async function frontend(){
  class OC{createBufferSource(){return {connect(){},start(){}};}async startRendering(){return {getChannelData:()=>new Float32Array([0,-1,1])};}}
  const window={isSecureContext:true,AudioContext:AC,OfflineAudioContext:OC,addEventListener(){}};
  const document={getElementById:id=>nodes[id],querySelector:()=>({src:'avatar-fixture'}),querySelectorAll:s=>s==='[data-message]'?shortcuts:closes,createElement:()=>new Element(),createElementNS:()=>new Element()};
- const context={console,document,window,navigator:{mediaDevices:{getUserMedia:async()=>{if(denied)throw Object.assign(Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){tracksStopped++;}}]};}},clipboard:{writeText:async()=>{}}},localStorage,sessionStorage,crypto:webcrypto,MediaRecorder:Recorder,Blob,DataView,ArrayBuffer,Uint8Array,Float32Array,btoa,AbortController,URL:{createObjectURL:()=> 'blob:fixture',revokeObjectURL(){}},Date,setTimeout,clearTimeout,setInterval,clearInterval,fetch:async(url,options)=>{
+ const context={console,document,window,navigator:{mediaDevices:{getUserMedia:async()=>{if(denied)throw Object.assign(Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){tracksStopped++;}}]};}},clipboard:{writeText:async()=>{}}},localStorage,sessionStorage,crypto:webcrypto,MediaRecorder:Recorder,Blob,DataView,ArrayBuffer,Uint8Array,Float32Array,btoa,AbortController,URL:{createObjectURL:()=> 'blob:fixture',revokeObjectURL(){}},Date,setTimeout:(fn,ms)=>{if([8000,25000].includes(ms)){const timer={fn,ms,cleared:false};notices.push(timer);return timer;}return setTimeout(fn,ms);},clearTimeout:id=>{if(id&&typeof id==='object'&&'cleared' in id)id.cleared=true;else clearTimeout(id);},setInterval,clearInterval,fetch:async(url,options)=>{
   const d=JSON.parse(options.body);calls.push(d);if(fail)throw Error('Conexão de teste indisponível');
   if(d.acao==='iniciar')return Response.json({sessao:webcrypto.randomUUID(),token:webcrypto.randomUUID(),versao:'prime-lar-2.3',perfil:{}});
   if(d.acao==='transcrever')return Response.json({texto:'Quero alugar um apartamento.',versao:'prime-lar-2.3'});
-  return Response.json({resposta:'Qual é sua ocupação?',etapa:'ocupacao',versao:'prime-lar-2.3',perfil:{finalidade:'alugar',tipo:'apartamento'}});
+  if(held)await new Promise(resolve=>finishResponse=resolve);return Response.json({resposta:'Qual é sua ocupação?',etapa:'ocupacao',versao:'prime-lar-2.3',perfil:{finalidade:'alugar',tipo:'apartamento'}});
  }};
  vm.createContext(context);vm.runInContext(fs.readFileSync('app.js','utf8'),context);
  assert.ok(nodes.messages.children[1].children.at(-1).textContent.includes('Prime Lar'));nodes.openMenu.dispatch('click');assert.equal(nodes.navDialog.open,true);assert.equal(nodes.openMenu['aria-expanded'],'true');shortcuts[1].dispatch('click');assert.equal(nodes.navDialog.open,false);assert.equal(nodes.openMenu['aria-expanded'],'false');check('Interface: menu superior abre, fecha e recolhe antes de continuar o atendimento.');await tick();await tick();
  assert.equal(calls.at(-1).mensagem,'Quero alugar um imóvel');assert.equal(nodes.send.disabled,false);
- check('Interface: abertura da Prime Lar, botão Alugar, envio e desbloqueio após resposta.');
+ check('Interface: abertura da Prime Lar, botão Alugar, envio e desbloqueio após resposta.');held=true;nodes.message.value='Conferir atendimento lento';nodes.form.dispatch('submit');await tick();notices.filter(t=>!t.cleared).find(t=>t.ms===8000).fn();assert.ok(nodes.messages.children.at(-1).children.at(-1).textContent.includes('preparando'));notices.filter(t=>!t.cleared).find(t=>t.ms===25000).fn();assert.ok(nodes.messages.children.at(-1).children.at(-1).textContent.includes('aguardando'));held=false;finishResponse();await tick();await tick();assert.ok(notices.every(t=>t.cleared));assert.equal(nodes.send.disabled,false);check('Interface: espera lenta mostra andamento, encerra os avisos e libera o envio após a resposta.');
  nodes.message.value='Mensagem em rascunho';const n=calls.length;shortcuts[3].dispatch('click');await tick();assert.equal(calls.length,n);assert.equal(nodes.message.value,'Mensagem em rascunho');assert.ok(shortcuts.slice(0,4).every(x=>x.disabled));shortcuts[5].dispatch('click');await tick();assert.ok(nodes.message.value.includes('financiamento'));
  check('Interface: compra/aluguel e casa/apartamento bloqueados após confirmação; dúvida preserva o rascunho.');
  nodes.openMenu.dispatch('click');nodes.help.dispatch('click');assert.equal(nodes.navDialog.open,false);assert.equal(nodes.helpDialog.open,true);nodes.otherHelp.dispatch('click');assert.equal(nodes.helpDialog.open,false);assert.equal(nodes.message.focused,true);check('Interface: Tenho dúvidas abre as opções e Outra dúvida volta ao campo de mensagem.');
  nodes.message.value='Meu orçamento mensal é R$ 1500';fail=true;nodes.form.dispatch('submit');await tick();await tick();assert.equal(nodes.message.value,'Meu orçamento mensal é R$ 1500');const failedRequest=calls.at(-1).request_id;
- fail=false;nodes.form.dispatch('submit');await tick();await tick();assert.equal(calls.at(-1).request_id,failedRequest);
+ assert.equal(nodes.retryMessage.hidden,false);fail=false;nodes.retryMessage.dispatch('click');await tick();await tick();assert.equal(calls.at(-1).request_id,failedRequest);assert.equal(nodes.retryMessage.hidden,true);
  check('Interface: falha preserva a mensagem e usa o mesmo identificador no reenvio.');
  nodes.specialist.dispatch('click');assert.ok(nodes.specialistDialog.open);assert.ok(nodes.summary.value.includes('alugar'));nodes.copySummary.dispatch('click');await tick();assert.ok(nodes.copyStatus.textContent.includes('copiado'));
  check('Interface: resumo revisável, cópia e canal manual para especialista.');

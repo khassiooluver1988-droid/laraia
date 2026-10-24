@@ -48,3 +48,7 @@ Interface para celular com cabeçalho único e compacto, avatar e identificaçã
 ## Modelo enviado e voz — visual 4.0
 
 Fundo azul-marinho, logomarca Prime Lar à esquerda, foto circular e menu à direita. Cartões brancos, controles de leitura azuis e Falar/Enviar verdes. A voz é desativada ao abrir; pode-se ativar a leitura das novas respostas ou ouvir somente a última. Parar interrompe a leitura. Microfone, envio, nova conversa e saída da tela encerram a leitura em andamento. O navegador escolhe uma voz em português disponível, preferindo pt-BR; timbre e disponibilidade variam por aparelho. Nenhum serviço pago ou nova função de servidor foi contratado.
+
+## Resposta lenta e reenvio
+
+Durante uma resposta demorada, a interface continua indicando que está aguardando. Se houver falha, o texto volta para a caixa e aparece Tentar novamente. O reenvio da mesma mensagem mantém o identificador para evitar respostas e registros duplicados. A atualização do serviço já foi implantada no Supabase; a interface recebe a nova versão pelo mecanismo Atualizar Lara.

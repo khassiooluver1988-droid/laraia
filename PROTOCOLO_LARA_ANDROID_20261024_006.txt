@@ -1,0 +1,26 @@
+PROTOCOLO DE SERVIÇO — LARA PRIME LAR
+Código: LARA-ANDROID-20261024-006
+Data/hora de Brasília: 24/10/2026 02:36:25
+Projeto: Lara — Prime Lar Imobiliária
+Tipo: Correção de respostas interrompidas por tempo limite.
+Referência anterior confirmada: LARA-ANDROID-20261024-005, commit 3379c1d2e919ffe21894df88c78edd8c9b8e767d.
+Sequência: 006 na série Android deste projeto; a sequência geral de outros serviços não foi verificada.
+
+Diagnóstico: o endpoint estava ativo. Os logs registraram TimeoutError e PROVIDER_UNAVAILABLE em chamadas da IA. O tempo anterior de 14 segundos e segunda tentativa de 10 segundos interrompia algumas gerações. Não foi constatada indisponibilidade total do serviço.
+Alterações: tentativas do provedor com 35/20 segundos; chamada da interface com até 95 segundos; avisos visíveis aos 8/25 segundos; erro específico em timeout persistente; botão Tentar novamente; preservação do texto e identificador no reenvio. Layout e controles de voz mantidos.
+Justificativa: reduzir interrupções prematuras e permitir recuperação sem perder a mensagem.
+
+Checklist:
+[OK] 36 verificações do atendimento/interface, 10 de Android/PWA, 6 de voz e 4 de publicação: total 56.
+[OK] Teste de timeout persistente sem registrar resposta inventada.
+[OK] Teste dos avisos de espera e encerramento correto dos temporizadores.
+[OK] Teste do botão Tentar novamente mantendo o identificador original.
+[OK] Função lara-chat implantada no Supabase, versão 12, status ACTIVE, revisão 2.7.
+[OK] Teste real após implantação: resposta HTTP 200 em 12,04 segundos.
+[OK] Reenvio real com mesmo identificador: HTTP 200 e mesma resposta.
+[OK] Banco conferido após o reenvio: uma mensagem do usuário e uma resposta, sem duplicação.
+[OK] Mesma autenticação de sessão, banco, modelo e contrato prime-lar-2.3 preservados.
+[LIMITE] O tempo do teste não garante latência futura. Falhas e indisponibilidade do fornecedor ainda podem ocorrer.
+
+Status: correção do servidor implantada e testada; publicação da interface acompanha o workflow do commit correspondente.
+Acesso: https://khassiooluver1988-droid.github.io/laraia/

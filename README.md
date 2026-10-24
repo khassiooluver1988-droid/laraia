@@ -49,7 +49,7 @@ Execute `cd prime-lar`, `node --no-warnings build_local.cjs` e `node --no-warnin
 
 ## Validação e implantação
 
-As 34 verificações locais passaram com simulações de navegador, banco e provedor. Cobrem sessão/token, origem, cota, histórico, reenvio, falhas, transcrição separada do envio, resumo, protocolo estável, correção, recusa, compra, aluguel, renda versus orçamento, campanha e identidade. widget.js também recebeu verificação de sintaxe.
+As 36 verificações locais passaram com simulações de navegador, banco e provedor. Cobrem sessão/token, origem, cota, histórico, reenvio, falhas, transcrição separada do envio, resumo, protocolo estável, correção, recusa, compra, aluguel, renda versus orçamento, campanha e identidade. widget.js também recebeu verificação de sintaxe.
 
 A função lara-chat foi atualizada para a versão 10, com autorização explícita do gestor para processamento de mensagens/áudios pelo Gemini e registro do atendimento no Supabase. A interface preserva o contrato prime-lar-2.3. Testes reais anteriores confirmaram respostas e gravação no banco; as validações locais não substituem teste de microfone físico.
 
@@ -71,3 +71,7 @@ O celular usa cabeçalho único com avatar e identificação da Lara, conversa e
 Layout baseado na imagem enviada pelo gestor: cabeçalho azul com logomarca Prime Lar à esquerda, retrato e menu à direita, fundo azul, mensagens brancas com detalhe dourado, botões azuis para ouvir e verdes para Falar/Enviar. Ativar voz da Lara liga a leitura das novas respostas; Ouvir resposta lê somente a última; Parar interrompe a sequência. A leitura começa desativada, usa as vozes disponíveis no navegador/aparelho e pode ser desligada. Não há promessa de uma voz específica ou de disponibilidade offline. A gravação/transcrição e o envio continuam no fluxo existente.
 
 Verifique também `node prime-lar/test_voice.cjs`, além das verificações existentes. Reprodução física de voz depende de teste no aparelho.
+
+## Correção de resposta — revisão do serviço 2.7
+
+A função lara-chat foi atualizada para a versão 12. Logs mostraram falhas PROVIDER_UNAVAILABLE após o tempo de espera anterior de 14/10 segundos. As tentativas do provedor agora têm 35/20 segundos; a interface aguarda até 95 segundos por chamada, informa a espera e oferece Tentar novamente. A mensagem e seu identificador são preservados no reenvio, mantendo a deduplicação no servidor. O contrato da interface continua prime-lar-2.3, sem alteração de modelo ou banco. A mudança reduz interrupções prematuras, sem garantir a disponibilidade do provedor.
