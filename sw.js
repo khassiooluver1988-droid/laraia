@@ -1,5 +1,5 @@
 'use strict';
-const REVISION = 'e08a6971c8d8e17e';
+const REVISION = 'f3e1b4e2fd6bf70e';
 const PREFIX = 'lara-android-'+new URL(self.registration.scope).pathname.replace(/[^a-z0-9]/gi,'_')+'-';
 const CACHE = PREFIX+REVISION;
 const CORE = ["index.html","android.js","android.css","manifest.webmanifest","assets/lara-prime-lar.webp","assets/prime-lar-logo.jpg","assets/village-por-do-sol.webp","assets/android/lara-192.png","assets/android/lara-512.png","assets/android/lara-maskable-512.png"].map(file => new URL(file,self.registration.scope).href);

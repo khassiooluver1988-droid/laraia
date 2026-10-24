@@ -4,7 +4,7 @@
 
 A Lara agora inclui instalação pelo navegador (PWA), com ícone próprio e abertura em janela independente. Compartilhe https://khassiooluver1988-droid.github.io/laraia/ e abra no Chrome do Android; abra **Menu → Instalar** e siga as instruções. O atendimento por IA exige internet. Veja [orientações e reprodução](ANDROID.md) e [protocolo desta entrega](PROTOCOLO_LARA_ANDROID_20261024.txt). A instalação em aparelho físico ainda deve ser validada.
 
-A revisão visual 3.0 aplica a imagem digital atualizada da Lara e preserva o contrato de atendimento prime-lar-2.3. O atendimento preparado permite à Lara para esclarecer dúvidas de compra e aluguel no site da Prime Lar, reunir as respostas em um resumo revisável e permitir o retorno do especialista pelo WhatsApp informado. O botão “Fale com a Lara” abre o painel; as opções de resposta ficam acima da caixa de mensagem.
+A revisão visual 4.0 aplica a imagem digital atualizada da Lara e preserva o contrato de atendimento prime-lar-2.3. O atendimento preparado permite à Lara para esclarecer dúvidas de compra e aluguel no site da Prime Lar, reunir as respostas em um resumo revisável e permitir o retorno do especialista pelo WhatsApp informado. O botão “Fale com a Lara” abre o painel; as opções de resposta ficam acima da caixa de mensagem.
 
 ## Identidade e roteiro
 
@@ -36,7 +36,7 @@ O navegador usa localStorage para a referência de acesso e sessionStorage para 
 - assets/prime-lar-logo.jpg: logomarca recebida.
 - assets/lara-prime-lar.png: imagem digital atualizada.
 - prime-lar/template.html e app.js: fontes da interface.
-- prime-lar/legacy-avatar.txt: arquivo histórico do avatar antigo; não é usado na revisão visual 3.0.
+- prime-lar/legacy-avatar.txt: arquivo histórico do avatar antigo; não é usado na revisão visual 4.0.
 - prime-lar/PROMPT_LARA_PRIME_LAR.txt: roteiro e instruções da IA.
 - prime-lar/index.ts e schema.sql: função proposta e estrutura de dados.
 - prime-lar/demo.js e widget-preview-template.html: respostas e botão demonstrativos.
@@ -65,3 +65,9 @@ A equipe ainda deve confirmar contato oficial, responsável pela distribuição,
 ## Visual do aplicativo 3.0
 
 O celular usa cabeçalho único com avatar e identificação da Lara, conversa em cartões e barra integrada de mensagem, microfone e envio. O menu superior recebe ícones; os diálogos usam painéis inferiores em telas pequenas. `prime-lar/app-design.css` é a fonte dos estilos, incorporada na interface e na prévia pelo build. A publicação recompila automaticamente quando esse arquivo é alterado.
+
+## Modelo visual 4.0 e leitura de voz
+
+Layout baseado na imagem enviada pelo gestor: cabeçalho azul com logomarca Prime Lar à esquerda, retrato e menu à direita, fundo azul, mensagens brancas com detalhe dourado, botões azuis para ouvir e verdes para Falar/Enviar. Ativar voz da Lara liga a leitura das novas respostas; Ouvir resposta lê somente a última; Parar interrompe a sequência. A leitura começa desativada, usa as vozes disponíveis no navegador/aparelho e pode ser desligada. Não há promessa de uma voz específica ou de disponibilidade offline. A gravação/transcrição e o envio continuam no fluxo existente.
+
+Verifique também `node prime-lar/test_voice.cjs`, além das verificações existentes. Reprodução física de voz depende de teste no aparelho.

@@ -10,6 +10,7 @@ const greeting='Olá! Eu sou a Lara, assistente virtual da Prime Lar Imobiliári
 let credentials=null,history=[],perfil={},etapa='nome',protocolo='',busy=false,recording=false,requestingMic=false,audioBusy=false,lastFailure=null;
 let villageCardVisible=false;
 let recorder=null,stream=null,chunks=[],audioBlob=null,audioUrl=null,ticker=null,recordStarted=0,cancelRecording=false;
+const voice=createLaraVoice({window,document,lastReply:()=>[...history].reverse().find(m=>m.role==='lara')?.text||greeting,isBlocked:()=>busy||recording||requestingMic||audioBusy});
 try{credentials=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch{}
 try{const saved=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'null');if(saved&&saved.sessao===credentials?.sessao&&Array.isArray(saved.history)){history=saved.history.slice(-40);perfil=saved.perfil||{};etapa=saved.etapa||'livre';protocolo=saved.protocolo||'';}}catch{}
 function save(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify({sessao:credentials?.sessao,history:history.slice(-40),perfil,etapa,protocolo}));}catch{}}
@@ -112,18 +113,18 @@ async function send(text){
  const mensagem=(text||'').trim();if(!mensagem)return;
  if(/village\s+p[oô]r\s+do\s+sol/i.test(mensagem))showVillageCard();
  if(mensagem.length>1500){feedback.textContent='Sua mensagem pode ter até 1.500 caracteres.';return;}
- feedback.textContent='';busy=true;syncControls();
+ voice.stop();feedback.textContent='';busy=true;syncControls();let spokenReply='';
  const requestId=lastFailure?.text===mensagem?lastFailure.requestId:crypto.randomUUID();
  const mine=bubble(mensagem,true),reply=bubble('A Lara está respondendo...',false,true);field.value='';fit();
  try{
   await ensureSession();const d=await call({acao:'chat',mensagem,request_id:requestId});
   if(typeof d.resposta!=='string'||!d.resposta.trim())throw Error('Não recebi uma resposta. Tente novamente.');
   reply.body.classList.remove('loading');reply.body.textContent=d.resposta;
-  perfil=d.perfil||perfil;etapa=d.etapa||'livre';if(d.protocolo)protocolo=d.protocolo;history.push({role:'me',text:mensagem},{role:'lara',text:d.resposta});renderGuide();save();lastFailure=null;
+  perfil=d.perfil||perfil;etapa=d.etapa||'livre';if(d.protocolo)protocolo=d.protocolo;history.push({role:'me',text:mensagem},{role:'lara',text:d.resposta});renderGuide();save();lastFailure=null;spokenReply=d.resposta;
  }catch(e){
   mine.item.remove();reply.item.remove();if(!field.value.trim())field.value=mensagem;fit();lastFailure={text:mensagem,requestId};
   feedback.textContent=e.name==='AbortError'?'O atendimento demorou. Sua mensagem foi preservada; toque em Enviar para tentar novamente.':e.message;
- }finally{busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;}
+ }finally{busy=false;syncControls();field.focus();log.scrollTop=log.scrollHeight;if(spokenReply)voice.onReply(spokenReply);}
 }
 function showVillageCard(){
  if(villageCardVisible)return;villageCardVisible=true;
@@ -149,6 +150,7 @@ function resetAudio(){
 function discardAudio(){if(recorder?.state==='recording'){cancelRecording=true;recorder.stop();}else resetAudio();$('audioBox').hidden=true;}
 async function startRecording(){
  if(busy||audioBusy||requestingMic||recording)return;
+ voice.stop();
  feedback.textContent='';resetAudio();cancelRecording=false;requestingMic=true;syncControls();
  try{
   stream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -207,9 +209,10 @@ $('about').addEventListener('click',()=>showDialog('aboutDialog'));
 $('privacy').addEventListener('click',()=>showDialog('privacyDialog'));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeDialog(b.dataset.close)));
 $('newChat').addEventListener('click',()=>{if(!busy&&!recording&&!audioBusy&&!requestingMic)showDialog('resetDialog');});
-$('confirmReset').addEventListener('click',()=>{if(busy||recording||audioBusy||requestingMic)return;credentials=null;history=[];perfil={};etapa='nome';protocolo='';lastFailure=null;try{localStorage.removeItem(SESSION_KEY);sessionStorage.removeItem(HISTORY_KEY);}catch{}discardAudio();renderHistory();renderGuide();field.value='';feedback.textContent='';fit();closeDialog('resetDialog');field.focus();});
+$('confirmReset').addEventListener('click',()=>{if(busy||recording||audioBusy||requestingMic)return;voice.stop();credentials=null;history=[];perfil={};etapa='nome';protocolo='';lastFailure=null;try{localStorage.removeItem(SESSION_KEY);sessionStorage.removeItem(HISTORY_KEY);}catch{}discardAudio();renderHistory();renderGuide();field.value='';feedback.textContent='';fit();closeDialog('resetDialog');field.focus();});
 $('copySummary').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('summary').value);$('copyStatus').textContent='Resumo copiado. Agora abra o Instagram e envie para a Prime Lar.';}catch{$('summary').focus();$('summary').select();$('copyStatus').textContent='Selecione e copie o texto acima para enviar no Instagram.';}});
 $('microphone').addEventListener('click',()=>{
+ voice.stop();
  if(recording){recorder?.stop();return;}if(busy||audioBusy||requestingMic)return;
  if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'||!(window.AudioContext||window.webkitAudioContext)||!(window.OfflineAudioContext||window.webkitOfflineAudioContext)){feedback.textContent='Este navegador não oferece gravação aqui. Abra o site em um navegador atualizado com HTTPS ou digite sua mensagem.';return;}
  $('audioBox').hidden=!$('audioBox').hidden;
@@ -218,7 +221,49 @@ $('startRecord').addEventListener('click',startRecording);
 $('stopRecord').addEventListener('click',()=>{if(recorder?.state==='recording')recorder.stop();});
 $('discardAudio').addEventListener('click',discardAudio);
 $('transcribe').addEventListener('click',transcribe);
-window.addEventListener('pagehide',()=>{cancelRecording=true;if(recorder?.state==='recording')recorder.stop();stream?.getTracks().forEach(t=>t.stop());if(ticker)clearInterval(ticker);if(audioUrl)URL.revokeObjectURL(audioUrl);});
+window.addEventListener('pagehide',()=>{voice.stop();cancelRecording=true;if(recorder?.state==='recording')recorder.stop();stream?.getTracks().forEach(t=>t.stop());if(ticker)clearInterval(ticker);if(audioUrl)URL.revokeObjectURL(audioUrl);});
+// __VOICE_START__
+function createLaraVoice({window,document,lastReply,isBlocked}){
+ const get=id=>document.getElementById(id),synth=window.speechSynthesis;
+ const toggle=get('toggleVoice'),label=get('voiceToggleLabel'),read=get('readReply'),stopButton=get('stopVoice'),status=get('voiceStatus'),info=get('voiceInfo');
+ let enabled=false,token=0,current=null,selected=null;
+ const supported=!!synth&&typeof window.SpeechSynthesisUtterance==='function';
+ const sayStatus=text=>{status.textContent=text;};
+ function selectVoice(){
+  const voices=synth?.getVoices()||[];
+  const br=voices.filter(v=>/^pt[-_]BR$/i.test(v.lang));
+  selected=br.find(v=>/Francisca|Luciana|Camila|Vit[oó]ria|Maria/i.test(v.name))||br[0]||voices.find(v=>/^pt\b/i.test(v.lang))||null;
+  info.textContent=selected?'Voz do aparelho · '+(selected.lang==='pt-BR'?'Português do Brasil':selected.lang):'Português do Brasil · voz do aparelho';
+ }
+ function stop(message){const wasReading=!!current;token++;current=null;if(supported)synth.cancel();stopButton.disabled=true;if(message)sayStatus(message);else if(wasReading)sayStatus('Leitura interrompida. Toque em Ouvir resposta para escutar novamente.');}
+ function speak(text){
+  if(!supported){sayStatus('Este navegador não oferece leitura por voz. Você pode continuar pelo texto.');return;}
+  if(isBlocked()){sayStatus('Aguarde a resposta ou finalize o áudio antes de ouvir.');return;}
+  if(document.hidden){sayStatus('Volte à Lara e toque em Ouvir resposta.');return;}
+  const clean=String(text||'').replace(/[*_#]/g,'').trim();if(!clean){sayStatus('Ainda não há uma resposta para ouvir.');return;}
+  stop();selectVoice();const id=token,words=clean.split(/\s+/),parts=[];let part='';
+  for(const word of words){if(part&&part.length+word.length>230){parts.push(part);part='';}part+=(part?' ':'')+word;}if(part)parts.push(part);
+  stopButton.disabled=false;sayStatus('Preparando a leitura da resposta…');
+  function next(){
+   if(id!==token)return;
+   const text=parts.shift();if(!text){current=null;stopButton.disabled=true;sayStatus('Leitura concluída. Para perguntar, toque em Falar.');return;}
+   const utterance=new window.SpeechSynthesisUtterance(text);current=utterance;utterance.lang=selected?.lang||'pt-BR';utterance.rate=.96;utterance.pitch=1;if(selected)utterance.voice=selected;
+   utterance.onstart=()=>{if(id===token)sayStatus('Lara está lendo a resposta…');};
+   utterance.onend=()=>{if(id===token)next();};
+   utterance.onerror=()=>{if(id===token){stop();sayStatus('Não foi possível reproduzir. Toque em Ouvir resposta para tentar novamente.');}};
+   try{synth.speak(utterance);}catch{stop();sayStatus('Não foi possível iniciar a voz neste navegador. Continue pelo texto ou tente novamente.');}
+  }
+  next();
+ }
+ toggle.addEventListener('click',()=>{if(!supported)return;enabled=!enabled;toggle.setAttribute('aria-pressed',String(enabled));label.textContent=enabled?'Desativar voz da Lara':'Ativar voz da Lara';if(enabled)speak(lastReply());else stop('Voz automática desativada. Você pode ouvir uma resposta quando quiser.');});
+ read.addEventListener('click',()=>speak(lastReply()));
+ stopButton.addEventListener('click',()=>stop('Áudio interrompido. Para perguntar por voz, toque em Falar.'));
+ stopButton.disabled=true;
+ document.addEventListener?.('visibilitychange',()=>{if(document.hidden)stop();});
+ if(supported){selectVoice();synth.addEventListener?.('voiceschanged',selectVoice);}else{toggle.disabled=true;read.disabled=true;info.textContent='Leitura por voz indisponível neste navegador';sayStatus('Você pode continuar pelo texto ou usar Falar para gravar.');}
+ return{stop,onReply:text=>{if(enabled&&!document.hidden)speak(text);}};
+}
+// __VOICE_END__
 renderHistory();renderGuide();syncControls();fit();
 })();
 

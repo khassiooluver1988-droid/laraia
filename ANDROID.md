@@ -44,3 +44,7 @@ Comprar, Alugar, Apartamento, Casa, Lançamento Village Pôr do Sol, Tenho dúvi
 ## Visual 3.0
 
 Interface para celular com cabeçalho único e compacto, avatar e identificação da assistente, conversa em cartões e barra de mensagem integrada. Menu superior com ícones; painéis de dúvidas e informações abrem como uma folha na parte inferior em telas pequenas. O arquivo `prime-lar/app-design.css` é a fonte visual e suas alterações geram a nova versão automaticamente na publicação. O retrato e a logomarca originais são preservados.
+
+## Modelo enviado e voz — visual 4.0
+
+Fundo azul-marinho, logomarca Prime Lar à esquerda, foto circular e menu à direita. Cartões brancos, controles de leitura azuis e Falar/Enviar verdes. A voz é desativada ao abrir; pode-se ativar a leitura das novas respostas ou ouvir somente a última. Parar interrompe a leitura. Microfone, envio, nova conversa e saída da tela encerram a leitura em andamento. O navegador escolhe uma voz em português disponível, preferindo pt-BR; timbre e disponibilidade variam por aparelho. Nenhum serviço pago ou nova função de servidor foi contratado.

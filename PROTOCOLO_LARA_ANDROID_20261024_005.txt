@@ -1,0 +1,26 @@
+PROTOCOLO DE SERVIÇO — LARA PRIME LAR
+Código: LARA-ANDROID-20261024-005
+Data/hora de Brasília: 24/10/2026 02:23:13
+Projeto: Lara — Prime Lar Imobiliária
+Tipo: Layout baseado no modelo enviado e controles de leitura por voz; visual 4.0.
+Referência anterior confirmada: LARA-ANDROID-20261024-004, commit cc002b1ea7bd35ff4461128ce5663f0b9674a609.
+Sequência: 005 na série Android deste projeto; a sequência geral de outros serviços não foi verificada.
+Referência visual local: upload/01-1000016579.png. Não foi incorporada a marca Villa Europa nem a personagem Rebeca.
+
+Descrição: cabeçalho azul com logomarca Prime Lar e retrato circular da Lara; menu superior direito; fundo escuro, mensagens brancas com detalhe dourado; controles de voz azuis e Falar/Enviar verdes. Leitura da última resposta, voz automática opcional e interrupção implementadas com as vozes do navegador/aparelho. Gravação/transcrição e fluxos existentes preservados.
+Justificativa: adaptar o aplicativo ao modelo explicitamente escolhido pelo gestor.
+
+Checklist:
+[OK] 34 verificações do atendimento e da navegação aprovadas.
+[OK] 10 verificações Android/PWA aprovadas.
+[OK] 4 verificações de publicação aprovadas.
+[OK] 6 verificações específicas de leitura de voz aprovadas com simulação do navegador: ativação, leitura manual, português, partes longas, parada, bloqueio, segundo plano, falha e ausência de suporte.
+[OK] Nenhuma leitura automática ao abrir; requer ativação pelo usuário.
+[OK] Leitura interrompida antes de gravar, enviar, iniciar nova conversa ou sair da página.
+[OK] Layout conferido em janela de 390 pixels de largura.
+[OK] Retrato, logomarca Prime Lar, instalação, atualização e menu preservados.
+[LIMITE] O navegador remoto não reproduziu áudio e exibiu corretamente a mensagem de falha. Reprodução e timbre precisam ser verificados no Android físico. A voz disponível depende do navegador e aparelho.
+[OK] Sem alterações no banco ou na função de atendimento.
+
+Status: implementação e verificações locais concluídas; publicação acompanha o workflow do commit correspondente.
+Acesso: https://khassiooluver1988-droid.github.io/laraia/
