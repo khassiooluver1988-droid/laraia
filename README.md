@@ -4,7 +4,7 @@
 
 A Lara agora inclui instalação pelo navegador (PWA), com ícone próprio e abertura em janela independente. Compartilhe https://khassiooluver1988-droid.github.io/laraia/ e abra no Chrome do Android; abra **Menu → Instalar** e siga as instruções. O atendimento por IA exige internet. Veja [orientações e reprodução](ANDROID.md) e [protocolo desta entrega](PROTOCOLO_LARA_ANDROID_20261024.txt). A instalação em aparelho físico ainda deve ser validada.
 
-A revisão 2.5 aplica a imagem digital atualizada da Lara e preserva o contrato de atendimento prime-lar-2.3. O atendimento preparado permite à Lara para esclarecer dúvidas de compra e aluguel no site da Prime Lar, reunir as respostas em um resumo revisável e permitir o retorno do especialista pelo WhatsApp informado. O botão “Fale com a Lara” abre o painel; as opções de resposta ficam acima da caixa de mensagem.
+A revisão visual 3.0 aplica a imagem digital atualizada da Lara e preserva o contrato de atendimento prime-lar-2.3. O atendimento preparado permite à Lara para esclarecer dúvidas de compra e aluguel no site da Prime Lar, reunir as respostas em um resumo revisável e permitir o retorno do especialista pelo WhatsApp informado. O botão “Fale com a Lara” abre o painel; as opções de resposta ficam acima da caixa de mensagem.
 
 ## Identidade e roteiro
 
@@ -36,7 +36,7 @@ O navegador usa localStorage para a referência de acesso e sessionStorage para 
 - assets/prime-lar-logo.jpg: logomarca recebida.
 - assets/lara-prime-lar.png: imagem digital atualizada.
 - prime-lar/template.html e app.js: fontes da interface.
-- prime-lar/legacy-avatar.txt: arquivo histórico do avatar antigo; não é usado na revisão 2.5.
+- prime-lar/legacy-avatar.txt: arquivo histórico do avatar antigo; não é usado na revisão visual 3.0.
 - prime-lar/PROMPT_LARA_PRIME_LAR.txt: roteiro e instruções da IA.
 - prime-lar/index.ts e schema.sql: função proposta e estrutura de dados.
 - prime-lar/demo.js e widget-preview-template.html: respostas e botão demonstrativos.
@@ -49,7 +49,7 @@ Execute `cd prime-lar`, `node --no-warnings build_local.cjs` e `node --no-warnin
 
 ## Validação e implantação
 
-As 33 verificações locais passaram com simulações de navegador, banco e provedor. Cobrem sessão/token, origem, cota, histórico, reenvio, falhas, transcrição separada do envio, resumo, protocolo estável, correção, recusa, compra, aluguel, renda versus orçamento, campanha e identidade. widget.js também recebeu verificação de sintaxe.
+As 34 verificações locais passaram com simulações de navegador, banco e provedor. Cobrem sessão/token, origem, cota, histórico, reenvio, falhas, transcrição separada do envio, resumo, protocolo estável, correção, recusa, compra, aluguel, renda versus orçamento, campanha e identidade. widget.js também recebeu verificação de sintaxe.
 
 A função lara-chat foi atualizada para a versão 10, com autorização explícita do gestor para processamento de mensagens/áudios pelo Gemini e registro do atendimento no Supabase. A interface preserva o contrato prime-lar-2.3. Testes reais anteriores confirmaram respostas e gravação no banco; as validações locais não substituem teste de microfone físico.
 
@@ -61,3 +61,7 @@ O widget abre um iframe com permissão de microfone delegada e descarrega o pain
 
 A equipe ainda deve confirmar contato oficial, responsável pela distribuição, horário, aviso de privacidade, endereço e vigência/regras da campanha. A base recebida contém endereços divergentes; a Lara não deve escolher um endereço definitivo sem confirmação.
 
+
+## Visual do aplicativo 3.0
+
+O celular usa cabeçalho único com avatar e identificação da Lara, conversa em cartões e barra integrada de mensagem, microfone e envio. O menu superior recebe ícones; os diálogos usam painéis inferiores em telas pequenas. `prime-lar/app-design.css` é a fonte dos estilos, incorporada na interface e na prévia pelo build. A publicação recompila automaticamente quando esse arquivo é alterado.

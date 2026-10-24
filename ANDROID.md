@@ -6,7 +6,7 @@ Aplicativo web instalável (PWA) sobre a interface atual da Lara. A instalação
 
 A opção **Atualizar Lara**, disponível no **Menu** do canto superior direito, abre a verificação de novas versões. Com internet, ele consulta a publicação e informa se há uma atualização pronta. Toque em **Atualizar agora** para aplicar. Rascunho, áudio aberto ou resposta em andamento impedem a recarga até terminar essa etapa.
 
-Ao salvar alterações na branch `main`, o GitHub Actions gera automaticamente o aplicativo e a nova revisão do cache antes de publicar. Se a alteração foi feita diretamente no `index.html`, ela é preservada. Alterações nas fontes `prime-lar/template.html`, `prime-lar/app.js` ou `prime-lar/build_local.cjs` recompilam a interface a partir dessas fontes. Se o mesmo conjunto de commits alterar fontes e `index.html`, as fontes são a versão canônica.
+Ao salvar alterações na branch `main`, o GitHub Actions gera automaticamente o aplicativo e a nova revisão do cache antes de publicar. Se a alteração foi feita diretamente no `index.html`, ela é preservada. Alterações nas fontes `prime-lar/template.html`, `prime-lar/app.js` , `prime-lar/app-design.css` ou `prime-lar/build_local.cjs` recompilam a interface a partir dessas fontes. Se o mesmo conjunto de commits alterar fontes e `index.html`, as fontes são a versão canônica.
 
 As mudanças só ficam disponíveis após sucesso do workflow de publicação. Alterações em função de IA ou banco do Supabase continuam exigindo implantação própria; o botão atualiza a interface publicada.
 
@@ -40,3 +40,7 @@ Os testes locais verificam manifesto, recursos, ciclo de instalação/atualizaç
 ## Menu do atendimento
 
 Comprar, Alugar, Apartamento, Casa, Lançamento Village Pôr do Sol, Tenho dúvidas e Falar com especialista ficam no menu superior direito. Nova conversa, informações, instalação e atualização também ficam nesse menu. A área inferior mantém a composição de mensagem, microfone e envio, com os avisos temporários e as respostas rápidas da etapa atual quando necessários.
+
+## Visual 3.0
+
+Interface para celular com cabeçalho único e compacto, avatar e identificação da assistente, conversa em cartões e barra de mensagem integrada. Menu superior com ícones; painéis de dúvidas e informações abrem como uma folha na parte inferior em telas pequenas. O arquivo `prime-lar/app-design.css` é a fonte visual e suas alterações geram a nova versão automaticamente na publicação. O retrato e a logomarca originais são preservados.

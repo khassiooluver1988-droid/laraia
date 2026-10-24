@@ -23,6 +23,8 @@ try{
  fs.appendFileSync(app,'\n/* TESTE_FONTES_COMPILE */\n');run(['git','add','prime-lar/app.js']);run(['git','commit','-m','fontes']);fs.writeFileSync(event,JSON.stringify({before:base}));
  publish();assert.match(fs.readFileSync(index,'utf8'),/TESTE_FONTES_COMPILE/);assert.notEqual(revision(),direct);
  checks.push('Editar as fontes da interface recompila a aplicação e gera nova revisão para os instalados.');
+ base=before();fs.appendFileSync(path.join(temp,'prime-lar/app-design.css'),'\n/* TESTE_VISUAL_COMPILADO */\n');run(['git','add','prime-lar/app-design.css']);run(['git','commit','-m','visual']);fs.writeFileSync(event,JSON.stringify({before:base}));publish();assert.match(fs.readFileSync(index,'utf8'),/TESTE_VISUAL_COMPILADO/);
+ checks.push('Editar o estilo do aplicativo também recompila a interface automaticamente.');
  const compiled=revision();fs.appendFileSync(path.join(temp,'prime-lar/sw-template.js'),'\n// TESTE_WORKER_REVISAO\n');
  run([node,'prime-lar/build_android.cjs']);assert.notEqual(revision(),compiled);
  checks.push('Alterar o service worker também muda o nome do cache, mantendo revisões isoladas.');

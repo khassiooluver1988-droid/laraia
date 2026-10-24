@@ -8,7 +8,7 @@ if (process.env.GITHUB_EVENT_PATH && process.env.GITHUB_EVENT_NAME === 'push') {
  const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
  if (!/^[a-f0-9]{40}$/.test(event.before || '') || /^0+$/.test(event.before)) throw Error('Não foi possível verificar a base da publicação.');
  const changed = execFileSync('git',['diff','--name-only',event.before,'HEAD'],{cwd:root,encoding:'utf8'}).trim().split('\n');
- const sources = new Set(['prime-lar/template.html','prime-lar/app.js','prime-lar/build_local.cjs']);
+ const sources = new Set(['prime-lar/template.html','prime-lar/app.js','prime-lar/app-design.css','prime-lar/build_local.cjs']);
  fromSources = changed.some(file => sources.has(file));
  // Evita sobrescrever silenciosamente uma edição da interface compilada.
  if (fromSources && changed.includes('index.html')) {

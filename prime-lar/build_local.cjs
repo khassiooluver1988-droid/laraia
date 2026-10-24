@@ -1,5 +1,5 @@
 const fs=require('node:fs');
-const html=fs.readFileSync('template.html','utf8'),app=fs.readFileSync('app.js','utf8');
+const html=fs.readFileSync('template.html','utf8').replace('__APP_STYLES__',()=>fs.readFileSync('app-design.css','utf8')),app=fs.readFileSync('app.js','utf8');
 const target='../index.html';
 const assetDir=target.startsWith('../')?'../assets':'assets';
 const dataUri=(name,mime)=>'data:'+mime+';base64,'+fs.readFileSync(assetDir+'/'+name).toString('base64');

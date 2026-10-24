@@ -10,6 +10,6 @@
 #installDialog ol{padding-left:21px}#installDialog li{margin:9px 0}
 #installStatus{font-size:12px;margin-top:12px;color:#72521c}
 .pwa-actions{display:flex;justify-content:center;margin:8px 0 0}.update-lara{display:flex;gap:6px;align-items:center;justify-content:center;min-height:36px;padding:6px 12px;border:1px solid #c5d7e8;border-radius:10px;background:#eff5fc;color:#062850;font-size:11px;font-weight:650}.update-lara svg{height:15px;width:15px}#updateStatus{padding:12px;border-radius:12px;background:#eff5fc;color:#123e74;min-height:60px}
-.menu-app-actions .pwa-actions{margin:0}.menu-app-actions .install-button,.menu-app-actions .update-lara{justify-content:flex-start;min-height:44px;width:100%;background:#f4f7fb;border-color:#d5e2ee;color:#123e74;font-size:13px;padding:10px 12px}.menu-app-actions .install-button[hidden]{display:none}
-@media(max-width:860px){.wrap{height:var(--lara-viewport,100dvh)}.header{padding-top:max(11px,env(safe-area-inset-top))}.brand-panel{padding-top:max(7px,env(safe-area-inset-top))}.bottom{padding-bottom:max(12px,env(safe-area-inset-bottom))}.install-button{padding:8px;min-height:40px}.android-notice{font-size:11px}}
+.menu-app-actions .pwa-actions{margin:0}.menu-app-actions .install-button,.menu-app-actions .update-lara{justify-content:flex-start;gap:10px;min-height:45px;width:100%;background:#edf1f6;border:0;color:#45617a;font-size:12px;padding:11px 12px;border-radius:13px}.menu-app-actions .install-button[hidden]{display:none}
+@media(max-width:860px){.wrap{height:var(--lara-viewport,100dvh)}.android-notice{font-size:11px}}
 @media(display-mode:standalone){body{overscroll-behavior-y:none}.wrap{padding-top:0}.install-button{display:none}}

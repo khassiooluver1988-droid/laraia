@@ -1,0 +1,24 @@
+PROTOCOLO DE SERVIÇO — LARA PRIME LAR
+Código: LARA-ANDROID-20261024-004
+Data/hora de Brasília: 24/10/2026 02:08:25
+Projeto: Lara — Prime Lar Imobiliária
+Tipo: Redesign visual do aplicativo, versão visual 3.0.
+Referência anterior confirmada: LARA-ANDROID-20261024-003, commit f0eba23dc2dc75dcba6da816f669e841aef723f9.
+Sequência: 004 na série Android deste projeto; a sequência geral de outros serviços não foi verificada.
+
+Descrição: cabeçalho branco compacto com retrato, identificação da Prime Lar e selo IA; fundo claro; mensagens em cartões arredondados; barra integrada de mensagem com botões circulares de microfone e envio; menu lateral com ícones, logomarca e atalhos; diálogos em formato de painel inferior no celular. Cores azul-marinho e dourado, retrato e logomarca preservados. Estilos organizados em app-design.css, com compilação automática na publicação.
+Justificativa: dar ao atendimento aparência de aplicativo, com mais espaço útil e controles adequados ao toque.
+
+Checklist:
+[OK] 34 verificações do atendimento e da navegação aprovadas.
+[OK] 10 verificações Android/PWA aprovadas.
+[OK] 4 verificações de publicação aprovadas, incluindo edição automática do arquivo de estilo.
+[OK] Menu, tela inicial e dúvidas conferidos em janela de 390 pixels de largura.
+[OK] Cabeçalho, mensagens, composição e identidade conferidos na versão desktop.
+[OK] IDs únicos e folha visual incorporada sem placeholders.
+[OK] Mantidos instalação, atualização, menu superior e fluxos existentes.
+[OK] Sem alteração do banco ou da função de atendimento.
+[LIMITE] Conferência em navegador; não substitui teste em aparelho Android físico.
+
+Status: redesign implementado e verificações locais concluídas; publicação acompanha o workflow do commit correspondente.
+Acesso: https://khassiooluver1988-droid.github.io/laraia/
